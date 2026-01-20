@@ -10,7 +10,7 @@ export interface Material {
 }
 
 export const materials: Material[] = [
-  // High-Performance Plastics
+  // Tier 1: High-Performance Plastics
   {
     id: 'peek',
     name: 'PEEK',
@@ -142,7 +142,7 @@ export const materials: Material[] = [
     industries: ['Automotive', 'Electronics', 'Industrial'],
   },
 
-  // Engineering Plastics
+  // Tier 2: Engineering Plastics
   {
     id: 'pom',
     name: 'POM',
@@ -234,7 +234,7 @@ export const materials: Material[] = [
     industries: ['Automotive', 'Mechanical'],
   },
 
-  // Standard Plastics
+  // Tier 3: Standard / Industrial Plastics
   {
     id: 'ppe',
     name: 'PPE',
@@ -284,6 +284,18 @@ export const materials: Material[] = [
     maxTemp: '85°C',
     applications: ['Housings', 'Prototypes', 'Consumer products'],
     industries: ['Consumer', 'Electronics', 'Automotive'],
+  },
+
+  // Special Category
+  {
+    id: 'modified-plastics',
+    name: 'Modified Plastics',
+    fullName: 'Specialty Modified Compounds',
+    tier: 'standard',
+    description: 'Custom-modified plastic formulations for specific application requirements.',
+    maxTemp: 'Varies',
+    applications: ['Custom solutions', 'Enhanced properties', 'Application-specific'],
+    industries: ['Various'],
   },
 ];
 
