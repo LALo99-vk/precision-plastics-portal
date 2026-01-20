@@ -3,24 +3,42 @@ import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route } from "react-router-dom";
+import { QuoteCartProvider } from "@/contexts/QuoteCartContext";
 import Index from "./pages/Index";
+import Products from "./pages/Products";
+import ProductCategory from "./pages/ProductCategory";
+import Materials from "./pages/Materials";
+import MaterialDetail from "./pages/MaterialDetail";
+import Industries from "./pages/Industries";
+import IndustryDetail from "./pages/IndustryDetail";
+import QuoteCart from "./pages/QuoteCart";
+import Contact from "./pages/Contact";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
 
 const App = () => (
   <QueryClientProvider client={queryClient}>
-    <TooltipProvider>
-      <Toaster />
-      <Sonner />
-      <BrowserRouter>
-        <Routes>
-          <Route path="/" element={<Index />} />
-          {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
-          <Route path="*" element={<NotFound />} />
-        </Routes>
-      </BrowserRouter>
-    </TooltipProvider>
+    <QuoteCartProvider>
+      <TooltipProvider>
+        <Toaster />
+        <Sonner />
+        <BrowserRouter>
+          <Routes>
+            <Route path="/" element={<Index />} />
+            <Route path="/products" element={<Products />} />
+            <Route path="/products/:categoryId" element={<ProductCategory />} />
+            <Route path="/materials" element={<Materials />} />
+            <Route path="/materials/:materialId" element={<MaterialDetail />} />
+            <Route path="/industries" element={<Industries />} />
+            <Route path="/industries/:industryId" element={<IndustryDetail />} />
+            <Route path="/quote-cart" element={<QuoteCart />} />
+            <Route path="/contact" element={<Contact />} />
+            <Route path="*" element={<NotFound />} />
+          </Routes>
+        </BrowserRouter>
+      </TooltipProvider>
+    </QuoteCartProvider>
   </QueryClientProvider>
 );
 
