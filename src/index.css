@@ -1,8 +1,8 @@
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
+
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
-
-@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
 
 @layer base {
   :root {
@@ -161,5 +161,49 @@
 
   .spec-table td {
     @apply px-4 py-3 border-b border-border;
+  }
+
+  /* Nyloking & Co. 3D Logo Style - Matching the image */
+  .nyloking-logo {
+    font-family: 'Inter', 'Arial Black', 'Arial Bold', 'Helvetica Neue', sans-serif;
+    font-weight: 900;
+    letter-spacing: 0.1em;
+    color: #1e3a8a; /* Dark royal blue fill */
+    position: relative;
+    display: inline-block;
+    line-height: 1.1;
+    /* White outline using text-shadow */
+    text-shadow: 
+      /* Outline effect - white border */
+      -1.5px -1.5px 0 #ffffff,
+      -1.5px -0.5px 0 #ffffff,
+      -1.5px 0.5px 0 #ffffff,
+      -1.5px 1.5px 0 #ffffff,
+      -0.5px -1.5px 0 #ffffff,
+      -0.5px 1.5px 0 #ffffff,
+      0.5px -1.5px 0 #ffffff,
+      0.5px 1.5px 0 #ffffff,
+      1.5px -1.5px 0 #ffffff,
+      1.5px -0.5px 0 #ffffff,
+      1.5px 0.5px 0 #ffffff,
+      1.5px 1.5px 0 #ffffff,
+      /* 3D extrusion - layered shadow effect with white outline */
+      2px 2px 0 #1e3a8a,
+      2px 2px 1px #ffffff,
+      3px 3px 0 #1e3a8a,
+      3px 3px 1px #ffffff,
+      4px 4px 0 #1e3a8a,
+      4px 4px 1px #ffffff,
+      5px 5px 0 #1e3a8a,
+      5px 5px 1px #ffffff,
+      6px 6px 0 #1e3a8a,
+      6px 6px 1px #ffffff,
+      /* Soft depth shadow */
+      7px 7px 12px rgba(30, 58, 138, 0.35);
+    transition: transform 0.2s ease;
+  }
+
+  .nyloking-logo:hover {
+    transform: translateY(-1px);
   }
 }

@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { Link } from 'react-router-dom';
-import { Trash2, Plus, Minus, Send, ShoppingCart } from 'lucide-react';
+import { Trash2, Plus, Minus, Send, ShoppingCart, Upload } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
@@ -8,6 +8,7 @@ import { Label } from '@/components/ui/label';
 import Layout from '@/components/layout/Layout';
 import Breadcrumb from '@/components/navigation/Breadcrumb';
 import { useQuoteCart } from '@/contexts/QuoteCartContext';
+import { supabase } from '@/lib/supabase';
 import { toast } from 'sonner';
 
 export default function QuoteCart() {
@@ -19,13 +20,118 @@ export default function QuoteCart() {
     phone: '',
     message: ''
   });
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [attachments, setAttachments] = useState<File[]>([]);
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const files = Array.from(e.target.files || []);
+    setAttachments([...attachments, ...files]);
+  };
+
+  const handleRemoveAttachment = (index: number) => {
+    setAttachments(attachments.filter((_, i) => i !== index));
+  };
+
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    // In production, this would submit to a backend
-    toast.success('Quotation request submitted successfully!');
+    if (items.length === 0) {
+      toast.error('Please add products to your cart');
+      return;
+    }
+
+    setIsSubmitting(true);
+
+    try {
+      // Create quotation inquiry
+      const { data: inquiry, error: inquiryError } = await supabase
+        .from('quotation_inquiries')
+        .insert([{
+          customer_name: formData.name,
+          customer_company: formData.company,
+          customer_email: formData.email,
+          customer_phone: formData.phone || null,
+          message: formData.message || null,
+        }])
+        .select()
+        .single();
+
+      if (inquiryError) throw inquiryError;
+      if (!inquiry) throw new Error('Failed to create inquiry');
+
+      // Create quotation items
+      // Try to find product IDs for items that have valid UUIDs
+      const productIds = items.map(item => item.id).filter(id => 
+        /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(id)
+      );
+      
+      let productIdMap: Record<string, string> = {};
+      if (productIds.length > 0) {
+        const { data: productsData } = await supabase
+          .from('products')
+          .select('id, name')
+          .in('id', productIds);
+        
+        if (productsData) {
+          productsData.forEach(p => {
+            productIdMap[p.name] = p.id;
+          });
+        }
+      }
+
+      const quotationItems = items.map(item => ({
+        inquiry_id: inquiry.id,
+        product_id: productIdMap[item.name] || (item.id.match(/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i) ? item.id : null),
+        product_name: item.name,
+        product_category: item.category,
+        quantity: item.quantity,
+        notes: item.notes || null,
+      }));
+
+      const { error: itemsError } = await supabase
+        .from('quotation_items')
+        .insert(quotationItems);
+
+      if (itemsError) throw itemsError;
+
+      // Upload attachments if any
+      if (attachments.length > 0) {
+        const uploadPromises = attachments.map(async (file) => {
+          const fileExt = file.name.split('.').pop();
+          const fileName = `${Date.now()}-${Math.random().toString(36).substring(7)}.${fileExt}`;
+          const filePath = `inquiries/${inquiry.id}/${fileName}`;
+
+          const { error: uploadError } = await supabase.storage
+            .from('inquiry-attachments')
+            .upload(filePath, file);
+
+          if (uploadError) throw uploadError;
+
+          const { data: urlData } = supabase.storage
+            .from('inquiry-attachments')
+            .getPublicUrl(filePath);
+
+          return supabase.from('inquiry_attachments').insert([{
+            inquiry_id: inquiry.id,
+            file_path: urlData.publicUrl,
+            bucket_name: 'inquiry-attachments',
+            file_name: file.name,
+            file_size: file.size,
+            file_type: file.type,
+          }]);
+        });
+
+        await Promise.all(uploadPromises);
+      }
+
+      toast.success(`Quotation request submitted successfully! Inquiry #${inquiry.inquiry_number}`);
     clearCart();
     setFormData({ name: '', company: '', email: '', phone: '', message: '' });
+      setAttachments([]);
+    } catch (error: any) {
+      toast.error('Failed to submit quotation request: ' + error.message);
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   return (
@@ -171,9 +277,37 @@ export default function QuoteCart() {
                         onChange={(e) => setFormData({ ...formData, message: e.target.value })}
                       />
                     </div>
-                    <Button type="submit" className="w-full">
+                    <div>
+                      <Label htmlFor="attachments">Attachments (Optional)</Label>
+                      <Input
+                        id="attachments"
+                        type="file"
+                        multiple
+                        onChange={handleFileChange}
+                        className="mt-1"
+                      />
+                      {attachments.length > 0 && (
+                        <div className="mt-2 space-y-1">
+                          {attachments.map((file, index) => (
+                            <div key={index} className="flex items-center justify-between text-sm p-2 bg-muted rounded">
+                              <span>{file.name}</span>
+                              <Button
+                                type="button"
+                                variant="ghost"
+                                size="icon"
+                                className="h-6 w-6"
+                                onClick={() => handleRemoveAttachment(index)}
+                              >
+                                <Trash2 className="w-3 h-3" />
+                              </Button>
+                            </div>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+                    <Button type="submit" className="w-full" disabled={isSubmitting}>
                       <Send className="w-4 h-4 mr-2" />
-                      Submit Quotation Request
+                      {isSubmitting ? 'Submitting...' : 'Submit Quotation Request'}
                     </Button>
                   </form>
                 </div>

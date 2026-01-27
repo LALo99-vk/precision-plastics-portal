@@ -5,13 +5,17 @@ import { useQuoteCart } from '@/contexts/QuoteCartContext';
 import { Button } from '@/components/ui/button';
 
 const productCategories = [
-  { name: 'Compounds', href: '/products/compounds', description: 'Custom compound formulations' },
+  { name: 'Laminated Sheets', href: '/products/laminated-sheets', description: 'Engineering plastic and composite laminate sheets' },
+  { name: 'Heat Resistant Rods', href: '/products/heat-resistant-rods', description: 'Rods for thermal and mechanical applications' },
+  { name: 'Acrylic Sheets', href: '/products/acrylic-sheets', description: 'Clear and coloured acrylic sheets' },
+  { name: 'PVC Products', href: '/products/pvc-products', description: 'Boards and profiles for cutting and fabrication' },
+  { name: 'PVC Curtain Rolls', href: '/products/pvc-curtain-rolls', description: 'Industrial PVC strip curtain rolls' },
+  { name: 'Polyurethane Cords', href: '/products/polyurethane-cords', description: 'Durable PU cords for conveying and drives' },
+  { name: 'Acrylic Tubes', href: '/products/acrylic-tubes', description: 'Transparent acrylic tubes' },
+  { name: 'PTFE Bushes', href: '/products/ptfe-bushes', description: 'Low-friction PTFE bushes' },
+  { name: 'PEEK Tubes', href: '/products/peek-tubes', description: 'High-performance PEEK tubes' },
   { name: 'Stock Shapes', href: '/products/stock-shapes', description: 'Rods, sheets, tubes & profiles' },
   { name: 'Sintered Plastics', href: '/products/sintered-plastics', description: 'High-performance sintered materials' },
-  { name: 'Composites', href: '/products/composites', description: 'Fiber-reinforced solutions' },
-  { name: 'Filaments', href: '/products/filaments', description: '3D printing filaments' },
-  { name: 'PI Powder', href: '/products/pi-powder', description: 'Polyimide powder materials' },
-  { name: 'Substrates', href: '/products/substrates', description: 'Electronic substrates' },
 ];
 
 const materialsTiers = [
@@ -45,9 +49,9 @@ export default function Header() {
       {/* Utility Bar */}
       <div className="utility-bar">
         <div className="industrial-container flex items-center justify-end gap-6 py-2">
-          <a href="tel:+1234567890" className="flex items-center gap-1 text-muted-foreground hover:text-foreground transition-colors">
+          <a href="tel:9448354795" className="flex items-center gap-1 text-muted-foreground hover:text-foreground transition-colors">
             <Phone className="w-3.5 h-3.5" />
-            <span>+1 (234) 567-890</span>
+            <span>9448354795</span>
           </a>
           <Link to="/contact" className="text-muted-foreground hover:text-foreground transition-colors">
             Contact
@@ -65,13 +69,15 @@ export default function Header() {
           <div className="flex items-center justify-between h-16">
             {/* Logo */}
             <Link to="/" className="flex items-center">
-              <span className="text-xl font-bold text-primary">POLYTECH</span>
-              <span className="text-xl font-light text-foreground">plastics</span>
+              <span className="nyloking-logo text-2xl md:text-3xl font-black uppercase tracking-tight">
+                NYLOKING & CO.
+              </span>
             </Link>
 
             {/* Desktop Navigation */}
             <div className="hidden lg:flex items-center gap-1">
               <Link to="/" className="industrial-btn-ghost">Home</Link>
+              <Link to="/about" className="industrial-btn-ghost">About</Link>
               
               {/* Products Dropdown */}
               <div 
@@ -188,6 +194,7 @@ export default function Header() {
           <div className="lg:hidden bg-background border-t border-border">
             <div className="industrial-container py-4 space-y-4">
               <Link to="/" className="block py-2 font-medium">Home</Link>
+              <Link to="/about" className="block py-2 font-medium">About</Link>
               <Link to="/products" className="block py-2 font-medium">Products</Link>
               <Link to="/materials" className="block py-2 font-medium">Materials</Link>
               <Link to="/industries" className="block py-2 font-medium">Industries</Link>

@@ -1,8 +1,9 @@
+import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { ArrowRight } from 'lucide-react';
 import Layout from '@/components/layout/Layout';
 import Breadcrumb from '@/components/navigation/Breadcrumb';
-import { materialsByTier } from '@/data/materials';
+import { supabase, Material } from '@/lib/supabase';
 
 const tierLabels = {
   'high-performance': {
@@ -20,6 +21,37 @@ const tierLabels = {
 };
 
 export default function Materials() {
+  const [materials, setMaterials] = useState<Material[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+
+  useEffect(() => {
+    fetchMaterials();
+  }, []);
+
+  const fetchMaterials = async () => {
+    try {
+      const { data, error } = await supabase
+        .from('materials')
+        .select('*')
+        .order('tier')
+        .order('name');
+
+      if (error) throw error;
+      setMaterials(data || []);
+    } catch (error: any) {
+      console.error('Failed to fetch materials:', error);
+      setMaterials([]);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const materialsByTier = {
+    'high-performance': materials.filter(m => m.tier === 'high-performance'),
+    'engineering': materials.filter(m => m.tier === 'engineering'),
+    'standard': materials.filter(m => m.tier === 'standard'),
+  };
+
   return (
     <Layout>
       <Breadcrumb items={[{ label: 'Materials' }]} />
@@ -34,7 +66,12 @@ export default function Materials() {
             </p>
           </div>
 
+          {isLoading ? (
+            <div className="text-center py-12">Loading materials...</div>
+          ) : (
+            <>
           {/* High-Performance Tier */}
+              {materialsByTier['high-performance'].length > 0 && (
           <div className="mb-12">
             <div className="mb-6">
               <h2 className="text-xl font-semibold text-primary mb-2">
@@ -66,8 +103,10 @@ export default function Materials() {
               ))}
             </div>
           </div>
+              )}
 
           {/* Engineering Tier */}
+              {materialsByTier['engineering'].length > 0 && (
           <div className="mb-12">
             <div className="mb-6">
               <h2 className="text-xl font-semibold text-primary mb-2">
@@ -78,7 +117,7 @@ export default function Materials() {
               </p>
             </div>
             <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-4">
-              {materialsByTier.engineering.map((material) => (
+                    {materialsByTier['engineering'].map((material) => (
                 <Link
                   key={material.id}
                   to={`/materials/${material.id}`}
@@ -99,8 +138,10 @@ export default function Materials() {
               ))}
             </div>
           </div>
+              )}
 
           {/* Standard Tier */}
+              {materialsByTier['standard'].length > 0 && (
           <div className="mb-12">
             <div className="mb-6">
               <h2 className="text-xl font-semibold text-primary mb-2">
@@ -111,7 +152,7 @@ export default function Materials() {
               </p>
             </div>
             <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-4">
-              {materialsByTier.standard.map((material) => (
+                    {materialsByTier['standard'].map((material) => (
                 <Link
                   key={material.id}
                   to={`/materials/${material.id}`}
@@ -132,6 +173,15 @@ export default function Materials() {
               ))}
             </div>
           </div>
+              )}
+
+              {materials.length === 0 && !isLoading && (
+                <div className="text-center py-12 text-muted-foreground">
+                  No materials found
+                </div>
+              )}
+            </>
+          )}
         </div>
       </section>
     </Layout>

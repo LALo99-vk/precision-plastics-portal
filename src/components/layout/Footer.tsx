@@ -2,11 +2,11 @@ import { Link } from 'react-router-dom';
 import { Mail, Phone, MapPin } from 'lucide-react';
 
 const productLinks = [
-  { name: 'Compounds', href: '/products/compounds' },
+  { name: 'Laminated Sheets', href: '/products/laminated-sheets' },
+  { name: 'Heat Resistant Rods', href: '/products/heat-resistant-rods' },
+  { name: 'Acrylic Sheets', href: '/products/acrylic-sheets' },
   { name: 'Stock Shapes', href: '/products/stock-shapes' },
   { name: 'Sintered Plastics', href: '/products/sintered-plastics' },
-  { name: 'Composites', href: '/products/composites' },
-  { name: 'Filaments', href: '/products/filaments' },
 ];
 
 const materialLinks = [
@@ -33,24 +33,32 @@ export default function Footer() {
           {/* Company Info */}
           <div className="lg:col-span-2">
             <div className="flex items-center mb-4">
-              <span className="text-xl font-bold text-primary-foreground">POLYTECH</span>
-              <span className="text-xl font-light">plastics</span>
+              <span className="text-xl font-bold text-primary-foreground">Nyloking</span>
+              <span className="text-xl font-light">& Co</span>
             </div>
             <p className="text-sm text-muted-foreground mb-6 max-w-sm">
               Leading supplier of high-performance plastics and composites for engineering applications worldwide.
             </p>
             <div className="space-y-2 text-sm">
-              <div className="flex items-center gap-2 text-muted-foreground">
-                <MapPin className="w-4 h-4" />
-                <span>123 Industrial Park, Tech City, TC 12345</span>
+              <div className="flex items-start gap-2 text-muted-foreground">
+                <MapPin className="w-4 h-4 mt-0.5 flex-shrink-0" />
+                <span>No. 161/1, S.P. Road, Bengaluru-560002, Karnataka, India</span>
               </div>
               <div className="flex items-center gap-2 text-muted-foreground">
                 <Phone className="w-4 h-4" />
-                <span>+1 (234) 567-890</span>
+                <span>
+                  <a href="tel:9448354795" className="hover:text-background">9448354795</a> | 
+                  <a href="tel:222234795" className="hover:text-background"> 222234795</a> / 
+                  <a href="tel:22224200" className="hover:text-background">22224200</a>
+                </span>
               </div>
               <div className="flex items-center gap-2 text-muted-foreground">
                 <Mail className="w-4 h-4" />
-                <span>info@polytechplastics.com</span>
+                <a href="mailto:nylokingandco@gmail.com" className="hover:text-background">nylokingandco@gmail.com</a>
+              </div>
+              <div className="pt-2 text-xs text-muted-foreground">
+                <p>Director Proprietor: NYLOKING & CO (Partner)</p>
+                <p>GSTIN: 29AABFN2443F1ZH</p>
               </div>
             </div>
           </div>
@@ -110,7 +118,7 @@ export default function Footer() {
         {/* Bottom Bar */}
         <div className="mt-12 pt-8 border-t border-muted-foreground/20">
           <div className="flex flex-col md:flex-row justify-between items-center gap-4 text-sm text-muted-foreground">
-            <p>© 2024 Polytech Plastics. All rights reserved.</p>
+            <p>© 2024 Nyloking & Co. All rights reserved.</p>
             <div className="flex gap-6">
               <Link to="/privacy" className="hover:text-background transition-colors">Privacy Policy</Link>
               <Link to="/terms" className="hover:text-background transition-colors">Terms of Service</Link>

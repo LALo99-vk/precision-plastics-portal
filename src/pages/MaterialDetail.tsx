@@ -1,14 +1,79 @@
+import { useEffect, useState } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import { Thermometer, Shield, Zap, ArrowRight } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import Layout from '@/components/layout/Layout';
 import Breadcrumb from '@/components/navigation/Breadcrumb';
-import { materials } from '@/data/materials';
-import { sampleProducts } from '@/data/products';
+import { supabase, Material, Product } from '@/lib/supabase';
 
 export default function MaterialDetail() {
   const { materialId } = useParams();
-  const material = materials.find(m => m.id === materialId);
+  const [material, setMaterial] = useState<Material | null>(null);
+  const [relatedProducts, setRelatedProducts] = useState<Product[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+
+  useEffect(() => {
+    if (materialId) {
+      fetchMaterial();
+    }
+  }, [materialId]);
+
+  useEffect(() => {
+    if (material) {
+      fetchRelatedProducts();
+    }
+  }, [material]);
+
+  const fetchMaterial = async () => {
+    if (!materialId) return;
+
+    try {
+      const { data, error } = await supabase
+        .from('materials')
+        .select('*')
+        .eq('id', materialId)
+        .single();
+
+      if (error) throw error;
+      setMaterial(data);
+    } catch (error: any) {
+      console.error('Failed to fetch material:', error);
+      setMaterial(null);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const fetchRelatedProducts = async () => {
+    if (!material) return;
+
+    try {
+      const { data, error } = await supabase
+        .from('products')
+        .select('*')
+        .eq('status', 'published')
+        .eq('available', true)
+        .is('deleted_at', null)
+        .contains('materials', [material.name])
+        .limit(4);
+
+      if (error) throw error;
+      setRelatedProducts(data || []);
+    } catch (error: any) {
+      console.error('Failed to fetch related products:', error);
+      setRelatedProducts([]);
+    }
+  };
+
+  if (isLoading) {
+    return (
+      <Layout>
+        <div className="industrial-container py-20 text-center">
+          <p>Loading material...</p>
+        </div>
+      </Layout>
+    );
+  }
 
   if (!material) {
     return (
@@ -20,10 +85,6 @@ export default function MaterialDetail() {
       </Layout>
     );
   }
-
-  const relatedProducts = sampleProducts.filter(
-    p => p.materials?.includes(material.name)
-  );
 
   const tierLabel = {
     'high-performance': 'High-Performance Plastic',

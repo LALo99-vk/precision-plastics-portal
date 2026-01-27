@@ -6,6 +6,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
 import Layout from '@/components/layout/Layout';
 import Breadcrumb from '@/components/navigation/Breadcrumb';
+import { supabase } from '@/lib/supabase';
 import { toast } from 'sonner';
 
 export default function Contact() {
@@ -17,11 +18,33 @@ export default function Contact() {
     subject: '',
     message: ''
   });
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    setIsSubmitting(true);
+
+    try {
+      const { error } = await supabase
+        .from('contact_submissions')
+        .insert([{
+          name: formData.name,
+          company: formData.company,
+          email: formData.email,
+          phone: formData.phone || null,
+          subject: formData.subject,
+          message: formData.message,
+        }]);
+
+      if (error) throw error;
+
     toast.success('Message sent successfully! We will get back to you soon.');
     setFormData({ name: '', company: '', email: '', phone: '', subject: '', message: '' });
+    } catch (error: any) {
+      toast.error('Failed to send message: ' + error.message);
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   return (
@@ -103,9 +126,9 @@ export default function Contact() {
                       onChange={(e) => setFormData({ ...formData, message: e.target.value })}
                     />
                   </div>
-                  <Button type="submit" size="lg">
+                  <Button type="submit" size="lg" disabled={isSubmitting}>
                     <Send className="w-4 h-4 mr-2" />
-                    Send Message
+                    {isSubmitting ? 'Sending...' : 'Send Message'}
                   </Button>
                 </form>
               </div>
@@ -116,11 +139,11 @@ export default function Contact() {
               <div className="space-y-6">
                 <div className="industrial-card">
                   <MapPin className="w-6 h-6 text-primary mb-3" />
-                  <h3 className="font-semibold mb-2">Address</h3>
+                  <h3 className="font-semibold mb-2">Business Address</h3>
                   <p className="text-sm text-muted-foreground">
-                    123 Industrial Park<br />
-                    Tech City, TC 12345<br />
-                    United States
+                    No. 161/1, S.P. Road<br />
+                    Bengaluru-560002<br />
+                    Karnataka, India
                   </p>
                 </div>
 
@@ -128,8 +151,8 @@ export default function Contact() {
                   <Phone className="w-6 h-6 text-primary mb-3" />
                   <h3 className="font-semibold mb-2">Phone</h3>
                   <p className="text-sm text-muted-foreground">
-                    +1 (234) 567-890<br />
-                    +1 (234) 567-891
+                    <a href="tel:9448354795" className="hover:text-primary">9448354795</a><br />
+                    <a href="tel:222234795" className="hover:text-primary">222234795</a> / <a href="tel:22224200" className="hover:text-primary">22224200</a>
                   </p>
                 </div>
 
@@ -137,8 +160,15 @@ export default function Contact() {
                   <Mail className="w-6 h-6 text-primary mb-3" />
                   <h3 className="font-semibold mb-2">Email</h3>
                   <p className="text-sm text-muted-foreground">
-                    info@polytechplastics.com<br />
-                    sales@polytechplastics.com
+                    <a href="mailto:nylokingandco@gmail.com" className="hover:text-primary">nylokingandco@gmail.com</a>
+                  </p>
+                </div>
+
+                <div className="industrial-card">
+                  <h3 className="font-semibold mb-2">Company Details</h3>
+                  <p className="text-sm text-muted-foreground">
+                    Director Proprietor: NYLOKING & CO (Partner)<br />
+                    GSTIN: 29AABFN2443F1ZH
                   </p>
                 </div>
 
