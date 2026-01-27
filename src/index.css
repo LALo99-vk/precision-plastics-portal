@@ -46,6 +46,11 @@
     --industrial-grey: 210 10% 60%;
     --industrial-grey-light: 210 15% 95%;
     --industrial-grey-border: 210 20% 88%;
+    /* New 'Lifestyle' Theme Colors */
+    --cream: 40 20% 97%;
+    --cream-foreground: 20 10% 10%;
+    --cream-dark: 40 10% 90%;
+    
     --hero-bg: 0 0% 8%;
     --hero-fg: 0 0% 100%;
 

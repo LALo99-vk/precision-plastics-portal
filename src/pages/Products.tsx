@@ -69,37 +69,74 @@ export default function Products() {
           {isLoading ? (
             <div className="text-center py-12">Loading categories...</div>
           ) : (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-              {categories.map((category) => {
+            <div className="grid grid-cols-1 md:grid-cols-4 gap-4 max-w-7xl mx-auto auto-rows-[300px]">
+              {categories.map((category, i) => {
                 const categoryId = category.id || category.name.toLowerCase().replace(/\s+/g, '-');
                 const count = productCounts[categoryId] || category.productCount || 0;
+
+                // Bento Layout Pattern:
+                // 0: Large square (2x2)
+                // 3: Wide (2x1)
+                // 6: Tall (1x2)
+                const isLarge = i === 0 || i === 7;
+                const isWide = i === 3 || i === 6;
+                const colSpan = isLarge ? "md:col-span-2 md:row-span-2" : isWide ? "md:col-span-2" : "md:col-span-1";
+
                 return (
-              <Link
-                key={category.id}
-                    to={`/products/${categoryId}`}
-                className="industrial-card group relative"
-              >
-                    <div className="aspect-video bg-secondary mb-4 flex items-center justify-center overflow-hidden relative">
-                      {category.image ? (
-                        <img src={category.image} alt={category.name} className="w-full h-full object-cover" />
-                      ) : (
-                  <div className="w-16 h-16 bg-muted-foreground/20 rounded" />
-                      )}
-                </div>
-                <h2 className="text-xl font-semibold mb-2 group-hover:text-primary transition-colors">
-                  {category.name}
-                </h2>
-                <p className="text-sm text-muted-foreground mb-4">
-                  {category.description}
-                </p>
-                <div className="flex items-center justify-between">
-                      <span className="text-sm text-primary">{count} products</span>
-                  <ArrowRight className="w-5 h-5 text-muted-foreground group-hover:text-primary transition-colors" />
-                </div>
-              </Link>
+                  <div
+                    key={category.id}
+                    className={`group relative rounded-3xl overflow-hidden border-4 border-slate-100 bg-white hover:border-slate-900 transition-all duration-300 ${colSpan}`}
+                  >
+                    <Link to={`/products/${categoryId}`} className="block h-full w-full">
+                      {/* Image Container */}
+                      <div className="absolute inset-0 w-full h-full">
+                        {category.image ? (
+                          <img
+                            src={category.image}
+                            alt={category.name}
+                            className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-110"
+                          />
+                        ) : (
+                          <div className="w-full h-full bg-slate-100 flex items-center justify-center">
+                            <div className="w-20 h-20 bg-slate-200 rounded-full animate-pulse" />
+                          </div>
+                        )}
+                        {/* Gradient Overlay */}
+                        <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent opacity-80 group-hover:opacity-90 transition-opacity" />
+                      </div>
+
+                      {/* Content */}
+                      <div className="absolute inset-0 p-6 flex flex-col justify-end">
+                        <div className="transform translate-y-4 group-hover:translate-y-0 transition-transform duration-300">
+                          <h2 className="text-2xl md:text-3xl font-bold text-white uppercase tracking-tighter mb-2">
+                            {category.name}
+                          </h2>
+                          <p className="text-sm text-slate-300 line-clamp-2 max-w-[90%] opacity-0 group-hover:opacity-100 transition-opacity duration-300 delay-100 mb-4">
+                            {category.description}
+                          </p>
+
+                          <div className="flex items-center justify-between border-t border-white/20 pt-4 opacity-0 group-hover:opacity-100 transition-opacity duration-300 delay-200">
+                            <span className="text-xs font-bold text-primary-foreground bg-primary px-2 py-1 rounded">
+                              {count} ITEMS
+                            </span>
+                            <div className="bg-white/10 p-2 rounded-full backdrop-blur-sm">
+                              <ArrowRight className="w-5 h-5 text-white" />
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+
+                      {/* Floating "View Specs" Badge - like reference */}
+                      <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 opacity-0 group-hover:opacity-100 transition-all duration-300 scale-90 group-hover:scale-100">
+                        <span className="bg-white text-black font-bold px-6 py-3 rounded-full shadow-xl">
+                          View Specs
+                        </span>
+                      </div>
+                    </Link>
+                  </div>
                 );
               })}
-          </div>
+            </div>
           )}
         </div>
       </section>

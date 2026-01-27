@@ -1,17 +1,17 @@
 import { useState, useEffect } from 'react';
-import { useParams } from 'react-router-dom';
-import { Grid, List, RefreshCw } from 'lucide-react';
+import { useParams, Link } from 'react-router-dom';
+import { Grid, List, RefreshCw, ArrowRight } from 'lucide-react';
 import Layout from '@/components/layout/Layout';
 import Breadcrumb from '@/components/navigation/Breadcrumb';
 import FilterPanel from '@/components/products/FilterPanel';
 import ProductCard from '@/components/products/ProductCard';
 import { Button } from '@/components/ui/button';
-import { supabase, Product, ProductImage, ProductCategory } from '@/lib/supabase';
+import { supabase, Product, ProductImage, ProductCategory as ProductCategoryType } from '@/lib/supabase';
 import { compoundFilters, stockShapeFilters } from '@/data/products';
 
-export default function ProductCategory() {
+export default function ProductCategoryPage() {
   const { categoryId } = useParams();
-  const [category, setCategory] = useState<ProductCategory | null>(null);
+  const [category, setCategory] = useState<ProductCategoryType | null>(null);
   const [products, setProducts] = useState<Product[]>([]);
   const [productImages, setProductImages] = useState<Record<string, string>>({});
   const [selectedFilters, setSelectedFilters] = useState<Record<string, string[]>>({});
@@ -23,7 +23,7 @@ export default function ProductCategory() {
 
     try {
       if (showLoading) setIsLoading(true);
-      
+
       // Convert categoryId back to category name for matching
       const categoryName = categoryId.replace(/-/g, ' ').split(' ')
         .map(word => word.charAt(0).toUpperCase() + word.slice(1))
@@ -138,7 +138,7 @@ export default function ProductCategory() {
 
   const fetchCategory = async () => {
     if (!categoryId) return;
-    
+
     try {
       // Try to find category by id first (only published)
       let { data, error } = await supabase
@@ -175,7 +175,7 @@ export default function ProductCategory() {
       console.error('Failed to fetch category:', error);
     }
   };
-  
+
   // Get appropriate filters based on category
   const getFilters = () => {
     switch (categoryId) {
@@ -207,12 +207,12 @@ export default function ProductCategory() {
 
   // Apply filters to products
   let filteredProducts = [...products];
-  
+
   // Filter by materials if selected
   if (selectedFilters['basic-polymer']?.length > 0) {
-    filteredProducts = filteredProducts.filter(p => 
-      p.materials?.some(m => 
-        selectedFilters['basic-polymer']?.some(f => 
+    filteredProducts = filteredProducts.filter(p =>
+      p.materials?.some(m =>
+        selectedFilters['basic-polymer']?.some(f =>
           m.toLowerCase().includes(f.toLowerCase())
         )
       )
@@ -221,9 +221,9 @@ export default function ProductCategory() {
 
   // Filter by industries if selected
   if (selectedFilters['industries']?.length > 0) {
-    filteredProducts = filteredProducts.filter(p => 
-      p.industries?.some(i => 
-        selectedFilters['industries']?.some(f => 
+    filteredProducts = filteredProducts.filter(p =>
+      p.industries?.some(i =>
+        selectedFilters['industries']?.some(f =>
           i.toLowerCase().includes(f.toLowerCase())
         )
       )
@@ -253,11 +253,11 @@ export default function ProductCategory() {
 
   return (
     <Layout>
-      <Breadcrumb 
+      <Breadcrumb
         items={[
           { label: 'Products', href: '/products' },
           { label: category.name }
-        ]} 
+        ]}
       />
 
       <section className="industrial-section">
@@ -319,26 +319,86 @@ export default function ProductCategory() {
                   No products found in this category
                 </div>
               ) : (
-              <div className={`grid gap-6 ${viewMode === 'grid' ? 'grid-cols-1 md:grid-cols-2 lg:grid-cols-3' : 'grid-cols-1'}`}>
-                  {filteredProducts.map((product) => {
+                <div className="grid grid-cols-1 md:grid-cols-4 gap-4 auto-rows-[300px]">
+                  {filteredProducts.map((product, i) => {
                     // Debug: Log each product's status
                     if (!product.status) {
                       console.warn('Product missing status:', product.id, product.name);
                     }
+
+                    // Bento Layout Pattern for Products
+                    const isLarge = i === 0;
+                    const isWide = i === 5 || i === 6;
+                    const isTall = i === 2;
+
+                    let colSpan = "md:col-span-1 md:row-span-1";
+                    if (isLarge) colSpan = "md:col-span-2 md:row-span-2";
+                    else if (isWide) colSpan = "md:col-span-2 md:row-span-1";
+                    else if (isTall) colSpan = "md:col-span-1 md:row-span-2";
+
+                    const imageSrc = productImages[product.id] || product.image;
+
                     return (
-                      <ProductCard
-                        key={product.id}
-                        id={product.id}
-                        name={product.name}
-                        category={product.category}
-                        description={product.description}
-                        image={productImages[product.id] || product.image}
-                        properties={product.properties}
-                        status={product.status || 'published'}
-                      />
+                      <div key={product.id} className={`group relative rounded-3xl overflow-hidden border-4 border-slate-100 bg-white hover:border-slate-900 transition-all duration-300 ${colSpan}`}>
+                        <Link to={`/products/${product.category.toLowerCase().replace(/\s+/g, '-')}/${product.id}`} className="block h-full w-full">
+                          {/* Image */}
+                          <div className="absolute inset-0 w-full h-full">
+                            {imageSrc ? (
+                              <img
+                                src={imageSrc}
+                                alt={product.name}
+                                className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-110"
+                              />
+                            ) : (
+                              <div className="w-full h-full bg-slate-100 flex items-center justify-center">
+                                <div className="w-16 h-16 bg-slate-200 rounded-full" />
+                              </div>
+                            )}
+                            <div className="absolute inset-0 bg-gradient-to-t from-black/90 via-black/20 to-transparent opacity-60 group-hover:opacity-80 transition-opacity" />
+                          </div>
+
+                          {/* Content */}
+                          <div className="absolute inset-0 p-6 flex flex-col justify-end">
+                            <div className="transform translate-y-4 group-hover:translate-y-0 transition-transform duration-300">
+                              {/* Status Badge Positioned at top */}
+                              <div className="absolute top-6 left-6 flex gap-2">
+                                {product.status && product.status !== 'published' && (
+                                  <span className="bg-yellow-500 text-black text-[10px] font-bold px-2 py-1 rounded uppercase">
+                                    {product.status.replace('_', ' ')}
+                                  </span>
+                                )}
+                              </div>
+
+                              <h3 className="text-xl font-bold text-white uppercase tracking-tighter mb-1">
+                                {product.name}
+                              </h3>
+                              <p className="text-xs text-slate-300 line-clamp-2 opacity-0 group-hover:opacity-100 transition-opacity duration-300 mb-2">
+                                {product.description}
+                              </p>
+
+                              {/* Properties Icons */}
+                              {product.properties && (
+                                <div className="flex gap-2 opacity-0 group-hover:opacity-100 transition-opacity duration-300">
+                                  {/* Simple indicators for properties */}
+                                  {Object.entries(product.properties).filter(([_, v]) => v).map(([k]) => (
+                                    <div key={k} className="w-2 h-2 rounded-full bg-primary" title={k}></div>
+                                  ))}
+                                </div>
+                              )}
+                            </div>
+                          </div>
+
+                          {/* Hover Button */}
+                          <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 opacity-0 group-hover:opacity-100 transition-all duration-300 scale-90 group-hover:scale-100">
+                            <span className="bg-white text-black font-bold px-4 py-2 text-sm rounded-full shadow-xl whitespace-nowrap">
+                              View Details
+                            </span>
+                          </div>
+                        </Link>
+                      </div>
                     );
                   })}
-              </div>
+                </div>
               )}
             </div>
           </div>
