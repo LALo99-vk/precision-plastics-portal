@@ -1,11 +1,16 @@
 import { useState } from 'react';
-import { Link } from 'react-router-dom';
-import { Menu, X } from 'lucide-react';
+import { Link, useLocation } from 'react-router-dom';
+import { X } from 'lucide-react';
 import { useQuoteCart } from '@/contexts/QuoteCartContext';
 
 export default function Header() {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const { itemCount } = useQuoteCart();
+  const location = useLocation();
+  const pathname = location.pathname;
+
+  const isActive = (path: string, exact?: boolean) =>
+    exact ? pathname === path : pathname === path || pathname.startsWith(path + '/');
 
   return (
     <header className="fixed top-0 left-0 right-0 z-50 py-4 px-6 bg-[#e8e4d8]/95 backdrop-blur-md transition-all duration-300">
@@ -24,13 +29,13 @@ export default function Header() {
 
         {/* Center: Pill Navigation */}
         <nav className="hidden lg:flex items-center bg-white border border-black/10 rounded-full px-2 py-1 shadow-sm">
-          <Link to="/" className="px-6 py-2 rounded-full text-sm font-medium hover:bg-black hover:text-white transition-all">HOME</Link>
+          <Link to="/" className="px-5 py-2 rounded-full text-sm font-medium hover:bg-black hover:text-white transition-all">HOME</Link>
           <span className="text-black/20">•</span>
-          <Link to="/products" className="px-6 py-2 rounded-full text-sm font-medium hover:bg-black hover:text-white transition-all">PRODUCTS</Link>
+          <Link to="/products" className="px-5 py-2 rounded-full text-sm font-medium hover:bg-black hover:text-white transition-all">PRODUCTS</Link>
           <span className="text-black/20">•</span>
-          <Link to="/about" className="px-6 py-2 rounded-full text-sm font-medium hover:bg-black hover:text-white transition-all">ABOUT</Link>
+          <Link to="/about" className="px-5 py-2 rounded-full text-sm font-medium hover:bg-black hover:text-white transition-all">ABOUT</Link>
           <span className="text-black/20">•</span>
-          <Link to="/contact" className="px-6 py-2 rounded-full text-sm font-medium hover:bg-black hover:text-white transition-all">CONTACT</Link>
+          <Link to="/contact" className="px-5 py-2 rounded-full text-sm font-medium hover:bg-black hover:text-white transition-all">CONTACT</Link>
         </nav>
 
         {/* Right: Cart & Menu */}
@@ -42,12 +47,19 @@ export default function Header() {
             <span className="text-sm font-medium">{itemCount}</span>
           </Link>
 
-          {/* Menu Button */}
+          {/* Menu Button – professional pill, clean hamburger */}
           <button
+            type="button"
             onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
-            className="p-2 hover:bg-black/5 rounded-full transition-colors"
+            className="flex items-center justify-center rounded-full border border-black/15 bg-white px-3 py-3 shadow-sm hover:bg-black hover:text-white hover:border-black transition-all duration-200 w-11 h-11"
+            aria-label="Open menu"
+            aria-expanded={mobileMenuOpen}
           >
-            <Menu className="w-6 h-6 stroke-[1.5]" />
+            <div className="flex flex-col gap-1.5 w-5 flex-shrink-0" aria-hidden>
+              <span className="block h-0.5 w-full bg-current rounded-full" />
+              <span className="block h-0.5 w-full bg-current rounded-full" />
+              <span className="block h-0.5 w-full bg-current rounded-full" />
+            </div>
           </button>
         </div>
       </div>
@@ -75,34 +87,41 @@ export default function Header() {
                 </button>
               </div>
 
-              {/* Navigation Links */}
+              {/* Navigation Links – active item highlighted */}
               <nav className="flex-1 p-6">
                 <div className="flex flex-col gap-2">
                   <Link
                     to="/"
                     onClick={() => setMobileMenuOpen(false)}
-                    className="px-4 py-3 rounded-lg hover:bg-black/5 transition-colors font-medium"
+                    className={`px-4 py-3 rounded-lg transition-colors font-medium ${isActive('/', true) ? 'bg-black text-white' : 'hover:bg-black/5'}`}
                   >
                     Home
                   </Link>
                   <Link
                     to="/products"
                     onClick={() => setMobileMenuOpen(false)}
-                    className="px-4 py-3 rounded-lg hover:bg-black/5 transition-colors font-medium"
+                    className={`px-4 py-3 rounded-lg transition-colors font-medium ${isActive('/products') ? 'bg-black text-white' : 'hover:bg-black/5'}`}
                   >
                     Products
                   </Link>
                   <Link
+                    to="/industries"
+                    onClick={() => setMobileMenuOpen(false)}
+                    className={`px-4 py-3 rounded-lg transition-colors font-medium ${isActive('/industries') ? 'bg-black text-white' : 'hover:bg-black/5'}`}
+                  >
+                    Industries
+                  </Link>
+                  <Link
                     to="/about"
                     onClick={() => setMobileMenuOpen(false)}
-                    className="px-4 py-3 rounded-lg hover:bg-black/5 transition-colors font-medium"
+                    className={`px-4 py-3 rounded-lg transition-colors font-medium ${isActive('/about') ? 'bg-black text-white' : 'hover:bg-black/5'}`}
                   >
                     About
                   </Link>
                   <Link
                     to="/contact"
                     onClick={() => setMobileMenuOpen(false)}
-                    className="px-4 py-3 rounded-lg hover:bg-black/5 transition-colors font-medium"
+                    className={`px-4 py-3 rounded-lg transition-colors font-medium ${isActive('/contact') ? 'bg-black text-white' : 'hover:bg-black/5'}`}
                   >
                     Contact
                   </Link>

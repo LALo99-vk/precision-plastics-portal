@@ -5,13 +5,13 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Checkbox } from '@/components/ui/checkbox';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
 import { Switch } from '@/components/ui/switch';
 import AdminLayout from '@/components/admin/AdminLayout';
-import { supabase, Product, ProductImage, ProductVariant, ProductFile } from '@/lib/supabase';
+import { supabase, getStoragePublicUrl, ensurePublicStorageUrl, Product, ProductImage, ProductVariant, ProductFile } from '@/lib/supabase';
 import { toast } from 'sonner';
 
 export default function AdminProducts() {
@@ -120,7 +120,7 @@ export default function AdminProducts() {
     if (filesRes.data) setProductFiles(filesRes.data);
   };
 
-  const handleImageUpload = async (file: File, isPrimary = false) => {
+  const handleImageUpload = async (file: File) => {
     if (!file || !editingProduct) return;
 
     try {
@@ -130,15 +130,15 @@ export default function AdminProducts() {
 
       const { error: uploadError } = await supabase.storage
         .from('product-images')
-        .upload(filePath, file, { upsert: false });
+        .upload(filePath, file, {
+          upsert: false,
+          contentType: file.type || 'image/jpeg',
+        });
 
       if (uploadError) throw uploadError;
 
-      const { data: urlData } = supabase.storage
-        .from('product-images')
-        .getPublicUrl(filePath);
+      const publicUrl = getStoragePublicUrl('product-images', filePath);
 
-      // Get max display_order
       const { data: existingImages } = await supabase
         .from('product_images')
         .select('display_order')
@@ -146,31 +146,27 @@ export default function AdminProducts() {
         .order('display_order', { ascending: false })
         .limit(1);
 
-      const displayOrder = existingImages?.[0]?.display_order !== undefined 
-        ? existingImages[0].display_order + 1 
-        : 0;
+      const nextOrder =
+        Array.isArray(existingImages) &&
+        existingImages.length > 0 &&
+        typeof (existingImages[0] as { display_order?: number }).display_order === 'number'
+          ? (existingImages[0] as { display_order: number }).display_order + 1
+          : 0;
+      const isFirst = nextOrder === 0;
 
-      // If this is primary, unset other primary images
-      if (isPrimary) {
-        await supabase
-          .from('product_images')
-          .update({ is_primary: false })
-          .eq('product_id', editingProduct.id);
-      }
-
-      const { error: insertError } = await supabase
-        .from('product_images')
-        .insert([{
+      const { error: insertError } = await supabase.from('product_images').insert([
+        {
           product_id: editingProduct.id,
-          image_path: urlData.publicUrl,
+          image_path: publicUrl,
           bucket_name: 'product-images',
-          display_order,
-          is_primary: isPrimary,
-        }]);
+          display_order: nextOrder,
+          is_primary: isFirst,
+        },
+      ]);
 
       if (insertError) throw insertError;
 
-      toast.success('Image uploaded successfully!');
+      toast.success('Image added.');
       fetchProductDetails(editingProduct.id);
     } catch (error: any) {
       toast.error('Failed to upload image: ' + error.message);
@@ -562,9 +558,12 @@ export default function AdminProducts() {
                 Add Product
               </Button>
             </DialogTrigger>
-            <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
+            <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto" aria-describedby="product-dialog-desc">
               <DialogHeader>
                 <DialogTitle>{editingProduct ? 'Edit Product' : 'Add New Product'}</DialogTitle>
+                <DialogDescription id="product-dialog-desc">
+                  {editingProduct ? 'Edit product details, images, variants, and files.' : 'Add a new product to the catalog.'}
+                </DialogDescription>
               </DialogHeader>
               <form onSubmit={handleSubmit} className="space-y-4">
                 <div className="grid grid-cols-2 gap-4">
@@ -661,51 +660,48 @@ export default function AdminProducts() {
                 {editingProduct && (
                   <>
                     <div className="border-t pt-4">
-                      <Label>Product Images</Label>
+                      <Label>Product images</Label>
+                      <p className="text-xs text-muted-foreground mt-1 mb-2">Order: 1, 2, 3… on the product page (users swipe). Add or remove below.</p>
                       <div className="grid grid-cols-4 gap-2 mt-2">
                         {productImages.map((img, idx) => (
-                          <div key={img.id} className="relative">
-                            <img src={img.image_path} alt={`Image ${idx + 1}`} className="w-full h-24 object-cover rounded" />
-                            <div className="absolute top-1 right-1 flex gap-1">
-                              <Button
-                                type="button"
-                                variant="ghost"
-                                size="icon"
-                                className="h-6 w-6 bg-background/80"
-                                onClick={() => handleDeleteImage(img.id, img.image_path)}
-                              >
-                                <X className="w-3 h-3" />
-                              </Button>
-                            </div>
-                            {img.is_primary && <Badge className="absolute bottom-1 left-1 text-xs">Primary</Badge>}
+                          <div key={img.id} className="relative group">
+                            <span className="absolute top-1 left-1 z-10 bg-black/60 text-white rounded-full w-6 h-6 flex items-center justify-center text-xs font-medium">
+                              {idx + 1}
+                            </span>
+                            <img src={ensurePublicStorageUrl(img.image_path) || img.image_path} alt="" className="w-full h-24 object-cover rounded border" onError={(e) => { (e.target as HTMLImageElement).src = 'data:image/svg+xml,%3Csvg xmlns="http://www.w3.org/2000/svg" width="96" height="96"%3E%3Crect fill="%23e5e7eb" width="96" height="96"/%3E%3C/svg%3E'; }} />
+                            <Button
+                              type="button"
+                              variant="destructive"
+                              size="icon"
+                              className="absolute top-1 right-1 h-6 w-6 opacity-90 group-hover:opacity-100"
+                              onClick={() => handleDeleteImage(img.id, img.image_path)}
+                            >
+                              <X className="w-3 h-3" />
+                            </Button>
                           </div>
                         ))}
                       </div>
-                      <div className="flex gap-2 mt-2">
-                        <Input
+                      <div className="mt-2">
+                        <input
                           type="file"
                           accept="image/*"
+                          multiple
+                          id="product-images-input"
+                          className="hidden"
                           onChange={(e) => {
-                            const file = e.target.files?.[0];
-                            if (file) handleImageUpload(file, false);
+                            const files = e.target.files;
+                            if (files?.length) {
+                              Array.from(files).forEach((file) => handleImageUpload(file));
+                              e.target.value = '';
+                            }
                           }}
-                          className="max-w-xs"
                         />
                         <Button
                           type="button"
                           variant="outline"
-                          onClick={() => {
-                            const input = document.createElement('input');
-                            input.type = 'file';
-                            input.accept = 'image/*';
-                            input.onchange = (e: any) => {
-                              const file = e.target.files?.[0];
-                              if (file) handleImageUpload(file, true);
-                            };
-                            input.click();
-                          }}
+                          onClick={() => document.getElementById('product-images-input')?.click()}
                         >
-                          Upload Primary
+                          Add image
                         </Button>
                       </div>
                     </div>

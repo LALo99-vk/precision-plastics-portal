@@ -1,55 +1,44 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useRef } from 'react';
 import { Link } from 'react-router-dom';
-import { ArrowRight, Package } from 'lucide-react';
-import { Button } from '@/components/ui/button';
+import { ArrowRight, FileText, Reply, Package } from 'lucide-react';
 import Layout from '@/components/layout/Layout';
-import { supabase, ProductCategory } from '@/lib/supabase';
+import { supabase, RotatingMessage, RotatingMessageType } from '@/lib/supabase';
 
 export default function Index() {
-  const [categories, setCategories] = useState<ProductCategory[]>([]);
-  const [productCounts, setProductCounts] = useState<Record<string, number>>({});
-  const [isLoading, setIsLoading] = useState(true);
+  const [messages, setMessages] = useState<RotatingMessage[]>([]);
+  const [currentIndex, setCurrentIndex] = useState(0);
+  const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   useEffect(() => {
-    fetchCategories();
+    const load = async () => {
+      const { data, error } = await supabase
+        .from('rotating_messages')
+        .select('*')
+        .eq('active', true)
+        .order('sort_order', { ascending: true })
+        .order('created_at', { ascending: true });
+      if (!error && data?.length) {
+        setMessages(data);
+        setCurrentIndex(0);
+      }
+    };
+    load();
   }, []);
 
-  const fetchCategories = async () => {
-    try {
-      // Fetch published categories only
-      const { data: categoriesData, error: catError } = await supabase
-        .from('product_categories')
-        .select('*')
-        .eq('status', 'published')
-        .order('name')
-        .limit(6);
+  useEffect(() => {
+    if (messages.length === 0) return;
+    const msg = messages[currentIndex];
+    const durationMs = (msg?.duration_seconds ?? 5) * 1000;
+    timerRef.current = setTimeout(() => {
+      setCurrentIndex((i) => (i + 1) % messages.length);
+    }, durationMs);
+    return () => {
+      if (timerRef.current) clearTimeout(timerRef.current);
+    };
+  }, [messages, currentIndex]);
 
-      if (catError) throw catError;
-
-      const { data: productsData, error: prodError } = await supabase
-        .from('products')
-        .select('category')
-        .eq('status', 'published')
-        .eq('available', true)
-        .is('deleted_at', null);
-
-      if (prodError) throw prodError;
-
-      const counts: Record<string, number> = {};
-      productsData?.forEach((p) => {
-        const categoryId = p.category.toLowerCase().replace(/\s+/g, '-');
-        counts[categoryId] = (counts[categoryId] || 0) + 1;
-      });
-
-      setProductCounts(counts);
-      setCategories(categoriesData || []);
-    } catch (error: any) {
-      console.error('Failed to fetch categories:', error);
-      setCategories([]);
-    } finally {
-      setIsLoading(false);
-    }
-  };
+  const currentMessage = messages[currentIndex];
+  const messageType: RotatingMessageType | undefined = currentMessage?.type;
 
   return (
     <Layout>
@@ -74,133 +63,217 @@ export default function Index() {
           <div className="bg-white rounded-[2.5rem] p-6 md:p-8 shadow-lg">
             <div className="grid grid-cols-1 md:grid-cols-12 gap-6 min-h-[500px]">
 
-              {/* LEFT CARD: Collection Navigation + Image */}
+              {/* LEFT COLUMN: Company photos + CTA */}
               <div className="md:col-span-4 bg-[#f0ebe0] rounded-[2rem] p-6 relative overflow-hidden flex flex-col min-h-[450px]">
-                {/* Floating Nav Pills */}
-                <div className="flex flex-col gap-2.5 z-20 mb-4">
-                  {categories.slice(0, 3).map((category, idx) => (
-                    <Link
-                      key={category.id}
-                      to={`/products/${category.id || category.name.toLowerCase().replace(/\s+/g, '-')}`}
-                      className={`flex items-center justify-between px-4 py-2.5 rounded-full transition-all text-xs font-bold uppercase tracking-wider ${idx === 2
-                        ? 'bg-black text-white'
-                        : 'bg-white/90 backdrop-blur-sm border border-black/10 hover:bg-black hover:text-white'
-                        }`}
-                    >
-                      <span className="truncate mr-2">{category.name}</span>
-                      <ArrowRight className="w-3 h-3 shrink-0" />
-                    </Link>
-                  ))}
-                </div>
-
-                {/* Main Image */}
-                <div className="mt-auto relative w-full flex-1 rounded-[1.5rem] overflow-hidden">
-                  <img
-                    src="/images/home/heromain2.jpg"
-                    alt="Collection"
-                    className="w-full h-full object-cover"
-                  />
-
-                  {/* Overlay Text */}
-                  <div className="absolute bottom-4 left-4 right-4 p-3 bg-white/95 backdrop-blur-sm rounded-xl">
-                    <p className="text-[9px] leading-relaxed text-muted-foreground">
-                      Style seamlessly blending mystery and movement into a mesmerizing ensemble of avant-garde fashion.
-                    </p>
+                <div className="flex flex-col gap-3 flex-1">
+                  {/* Company photo – primary */}
+                  <div className="relative flex-1 rounded-[1.5rem] overflow-hidden min-h-[180px]">
+                    <img
+                      src="/images/home/heromain2.jpg"
+                      alt="Nyloking & Co. – company"
+                      className="w-full h-full object-cover"
+                    />
                   </div>
-
-                  {/* Corner Arrow */}
-                  <div className="absolute top-3 right-3 bg-white rounded-full p-1.5">
-                    <ArrowRight className="w-3 h-3 -rotate-45" />
+                  {/* Optional second company photo */}
+                  <div className="relative h-28 rounded-[1.25rem] overflow-hidden">
+                    <img
+                      src="/images/home/heromain2.jpg"
+                      alt="Nyloking & Co. – team or facility"
+                      className="w-full h-full object-cover"
+                    />
                   </div>
                 </div>
+                {/* CTA card */}
+                <Link
+                  to="/contact"
+                  className="mt-4 flex items-center justify-between gap-3 rounded-[1.25rem] bg-black text-white px-5 py-4 group hover:bg-black/90 transition-colors"
+                >
+                  <span className="text-sm font-semibold uppercase tracking-wider">Get a quote</span>
+                  <ArrowRight className="w-4 h-4 shrink-0 group-hover:translate-x-0.5 transition-transform" />
+                </Link>
               </div>
 
-              {/* CENTER: 3-Column Image/Video Grid */}
+              {/* CENTER: 3-column media grid – images and videos (add entries to centerMediaItems to show more) */}
               <div className="md:col-span-4 flex flex-col gap-4 relative min-h-[400px]">
                 <div className="grid grid-cols-3 gap-3 h-full">
-                  {/* Column 1: Image */}
-                  <div className="rounded-[1.5rem] overflow-hidden bg-gradient-to-br from-zinc-100 to-zinc-200 relative group">
-                    <img
-                      src="/images/home/heromain2.jpg"
-                      alt="Product showcase 1"
-                      className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500"
-                    />
-                    <div className="absolute inset-0 bg-gradient-to-t from-black/20 to-transparent" />
-                  </div>
-
-                  {/* Column 2: Video */}
-                  <div className="rounded-[1.5rem] overflow-hidden bg-black relative group">
-                    <img
-                      src="/images/home/heromain2.jpg"
-                      alt="Product showcase video"
-                      className="w-full h-full object-cover opacity-80 group-hover:opacity-100 transition-opacity duration-500"
-                    />
-                    {/* Play Button */}
-                    <div className="absolute inset-0 flex items-center justify-center">
-                      <div className="w-12 h-12 rounded-full bg-white/20 backdrop-blur-sm border border-white/30 flex items-center justify-center group-hover:scale-110 transition-transform cursor-pointer">
-                        <div className="w-0 h-0 border-t-[6px] border-t-transparent border-l-[9px] border-l-white border-b-[6px] border-b-transparent ml-0.5" />
-                      </div>
+                  {[
+                    { type: 'image' as const, src: '/images/home/heromain2.jpg', alt: 'Showcase 1' },
+                    { type: 'video' as const, src: '/images/home/heromain2.jpg', alt: 'Showcase video', poster: '/images/home/heromain2.jpg' },
+                    { type: 'image' as const, src: '/images/home/heromain2.jpg', alt: 'Showcase 2' },
+                  ].map((item, idx) => (
+                    <div
+                      key={idx}
+                      className="rounded-[1.5rem] overflow-hidden bg-black relative group min-h-[140px]"
+                    >
+                      {item.type === 'video' ? (
+                        <>
+                          <img
+                            src={item.poster || item.src}
+                            alt={item.alt}
+                            className="w-full h-full object-cover opacity-80 group-hover:opacity-100 transition-opacity duration-500"
+                          />
+                          <div className="absolute inset-0 flex items-center justify-center">
+                            <div className="w-12 h-12 rounded-full bg-white/20 backdrop-blur-sm border border-white/30 flex items-center justify-center group-hover:scale-110 transition-transform cursor-pointer">
+                              <div className="w-0 h-0 border-t-[6px] border-t-transparent border-l-[9px] border-l-white border-b-[6px] border-b-transparent ml-0.5" />
+                            </div>
+                          </div>
+                          <div className="absolute inset-0 bg-gradient-to-t from-black/40 to-transparent" />
+                          {/* To use a real video later: add <video> with src and swap click to play */}
+                        </>
+                      ) : (
+                        <>
+                          <img
+                            src={item.src}
+                            alt={item.alt}
+                            className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500"
+                          />
+                          <div className="absolute inset-0 bg-gradient-to-t from-black/20 to-transparent" />
+                        </>
+                      )}
                     </div>
-                    <div className="absolute inset-0 bg-gradient-to-t from-black/40 to-transparent" />
-                  </div>
-
-                  {/* Column 3: Image */}
-                  <div className="rounded-[1.5rem] overflow-hidden bg-gradient-to-br from-zinc-100 to-zinc-200 relative group">
-                    <img
-                      src="/images/home/heromain2.jpg"
-                      alt="Product showcase 2"
-                      className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500"
-                    />
-                    <div className="absolute inset-0 bg-gradient-to-t from-black/20 to-transparent" />
-                  </div>
+                  ))}
                 </div>
               </div>
 
-              {/* RIGHT COLUMN: Interactive Media + Stats */}
+              {/* RIGHT COLUMN: Spotlight product, Awards, Instagram */}
               <div className="md:col-span-4 flex flex-col gap-4 h-full">
-                {/* Top: Video/Image Card */}
-                <Link to="/products" className="flex-1 bg-black rounded-[2rem] p-3 relative overflow-hidden group min-h-[250px]">
-                  <div className="absolute inset-0 flex items-center justify-center gap-0.5 opacity-15">
-                    {[...Array(15)].map((_, i) => (
-                      <div key={i} className="h-full w-px bg-white/40" />
+                {/* 1. Spotlight / “New” product */}
+                <div className="rounded-[2rem] overflow-hidden bg-black relative group min-h-[160px]">
+                  <img
+                    src="/images/home/heromain2.jpg"
+                    alt="Spotlight product"
+                    className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
+                  />
+                  <span className="absolute top-3 right-3 bg-[#e0dcd0] text-black text-[10px] px-2.5 py-1 rounded-full font-bold uppercase">
+                    New
+                  </span>
+                  <div className="absolute bottom-3 left-3 right-3">
+                    <Link to="/products" className="text-white text-xs font-semibold uppercase tracking-wider hover:underline">
+                      View product
+                    </Link>
+                  </div>
+                </div>
+
+                {/* 2. Awards / certifications */}
+                <div className="rounded-[2rem] bg-[#f0ebe0] p-5">
+                  <p className="text-[10px] uppercase font-bold text-muted-foreground tracking-wider mb-3">Awards & certifications</p>
+                  <div className="flex flex-wrap gap-3 items-center">
+                    {/* Placeholder badges – replace with real cert logos or text */}
+                    <span className="inline-flex items-center rounded-full bg-white px-3 py-1.5 text-[10px] font-medium border border-black/10">ISO</span>
+                    <span className="inline-flex items-center rounded-full bg-white px-3 py-1.5 text-[10px] font-medium border border-black/10">Quality</span>
+                    <span className="inline-flex items-center rounded-full bg-white px-3 py-1.5 text-[10px] font-medium border border-black/10">Trusted</span>
+                  </div>
+                </div>
+
+                {/* 3. From our Instagram / social feed */}
+                <div className="rounded-[2rem] overflow-hidden">
+                  <p className="text-[10px] uppercase font-bold text-muted-foreground tracking-wider mb-2 px-1">From our Instagram</p>
+                  <div className="grid grid-cols-3 gap-1.5">
+                    {[1, 2, 3].map((i) => (
+                      <a
+                        key={i}
+                        href="https://instagram.com"
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="aspect-square rounded-xl overflow-hidden bg-zinc-200 group"
+                      >
+                        <img
+                          src="/images/home/heromain2.jpg"
+                          alt={`Instagram ${i}`}
+                          className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-300"
+                        />
+                      </a>
                     ))}
                   </div>
-
-                  <div className="flex h-full gap-3 relative z-10">
-                    <div className="flex-1 rounded-[1.2rem] overflow-hidden relative">
-                      <img src="/images/home/heromain2.jpg" className="w-full h-full object-cover opacity-70" alt="Product 1" />
-                    </div>
-                    <div className="flex-1 rounded-[1.2rem] overflow-hidden relative mt-8 bg-zinc-900">
-                      <div className="absolute top-2 right-2 bg-[#e0dcd0] text-black text-[8px] px-2 py-0.5 rounded font-bold uppercase">New</div>
-                      <img src="/images/home/heromain2.jpg" className="w-full h-full object-cover opacity-50" alt="Product 2" />
-                    </div>
-                  </div>
-
-                  {/* Play Button Center */}
-                  <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-16 h-16 rounded-full border border-white/30 flex items-center justify-center backdrop-blur-sm cursor-pointer group-hover:scale-110 transition-transform bg-white/10 text-white z-20">
-                    <div className="w-0 h-0 border-t-[7px] border-t-transparent border-l-[10px] border-l-white border-b-[7px] border-b-transparent ml-1" />
-                  </div>
-                </Link>
-
-                {/* Bottom: Satisfaction Card */}
-                <div className="bg-[#f0ebe0] rounded-[2rem] p-5 h-32 flex flex-col justify-between">
-                  <div className="flex items-start justify-between">
-                    <div className="flex -space-x-1.5">
-                      <div className="w-8 h-8 rounded-full border-2 border-[#f0ebe0] bg-zinc-300" />
-                      <div className="w-8 h-8 rounded-full border-2 border-[#f0ebe0] bg-zinc-400" />
-                      <div className="w-8 h-8 rounded-full border-2 border-[#f0ebe0] bg-zinc-500 flex items-center justify-center text-[10px] text-white font-bold">+</div>
-                    </div>
-                    <span className="text-3xl font-bold font-mono leading-none">89<span className="text-lg">%</span></span>
-                  </div>
-                  <div>
-                    <div className="w-full h-1.5 bg-black/10 rounded-full mb-2 overflow-hidden">
-                      <div className="w-[89%] h-full bg-black rounded-full" />
-                    </div>
-                    <span className="text-[9px] uppercase font-bold text-muted-foreground tracking-wider">Satisfied Customers</span>
-                  </div>
                 </div>
               </div>
 
+            </div>
+
+            {/* Rotating messages – quotes, offers, notices (admin-editable) */}
+            {currentMessage && (
+              <div
+                key={currentMessage.id}
+                className={`mt-6 text-center px-4 py-4 rounded-2xl transition-colors duration-300 ${
+                  messageType === 'offer'
+                    ? 'bg-amber-100 text-amber-900 border border-amber-200'
+                    : messageType === 'notice'
+                      ? 'bg-blue-50 text-blue-900 border border-blue-200'
+                      : 'bg-[#f0ebe0]/80 text-muted-foreground'
+                }`}
+              >
+                <p
+                  className={
+                    messageType === 'offer' || messageType === 'notice'
+                      ? 'text-sm font-semibold not-italic animate-in fade-in duration-500'
+                      : 'text-sm italic animate-in fade-in duration-500'
+                  }
+                >
+                  {currentMessage.message}
+                </p>
+              </div>
+            )}
+          </div>
+        </div>
+
+        {/* How it works – 3 steps, bold and clear */}
+        <div className="w-full max-w-[1300px] mx-auto px-4 md:px-6 mt-8 mb-12">
+          <div className="bg-white rounded-[2.5rem] p-6 md:p-10 shadow-lg">
+            <h2 className="text-2xl md:text-3xl font-bold tracking-tight text-center mb-2">
+              How it works
+            </h2>
+            <p className="text-center text-muted-foreground text-sm max-w-xl mx-auto mb-10">
+              From request to delivery — simple, transparent, and built around your needs.
+            </p>
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-8 md:gap-6">
+              {/* Step 1 */}
+              <div className="relative flex flex-col items-center text-center md:border-r md:border-black/10 md:pr-6 md:last:border-0">
+                <span className="w-10 h-10 rounded-full bg-[#e8e4d8] border-2 border-black flex items-center justify-center text-sm font-bold mb-4">
+                  1
+                </span>
+                <div className="w-16 h-16 rounded-2xl bg-black text-white flex items-center justify-center mb-4">
+                  <FileText className="w-8 h-8" />
+                </div>
+                <h3 className="text-lg font-bold uppercase tracking-wider mb-2">Request a quote</h3>
+                <p className="text-sm text-muted-foreground">
+                  Tell us your product, quantity, and specs. Use our contact form or add items from the catalog to your quote cart.
+                </p>
+              </div>
+              {/* Step 2 */}
+              <div className="relative flex flex-col items-center text-center md:border-r md:border-black/10 md:pr-6 md:last:border-0">
+                <span className="w-10 h-10 rounded-full bg-[#e8e4d8] border-2 border-black flex items-center justify-center text-sm font-bold mb-4">
+                  2
+                </span>
+                <div className="w-16 h-16 rounded-2xl bg-black text-white flex items-center justify-center mb-4">
+                  <Reply className="w-8 h-8" />
+                </div>
+                <h3 className="text-lg font-bold uppercase tracking-wider mb-2">We respond</h3>
+                <p className="text-sm text-muted-foreground">
+                  Our team reviews your request and sends a detailed quote — typically within 24 hours. We’re happy to discuss options.
+                </p>
+              </div>
+              {/* Step 3 */}
+              <div className="relative flex flex-col items-center text-center">
+                <span className="w-10 h-10 rounded-full bg-[#e8e4d8] border-2 border-black flex items-center justify-center text-sm font-bold mb-4">
+                  3
+                </span>
+                <div className="w-16 h-16 rounded-2xl bg-black text-white flex items-center justify-center mb-4">
+                  <Package className="w-8 h-8" />
+                </div>
+                <h3 className="text-lg font-bold uppercase tracking-wider mb-2">You order</h3>
+                <p className="text-sm text-muted-foreground">
+                  Confirm your order and we handle production and delivery. Quality materials, on time, every time.
+                </p>
+              </div>
+            </div>
+            <div className="mt-8 text-center">
+              <Link
+                to="/contact"
+                className="inline-flex items-center gap-2 rounded-full bg-black text-white px-6 py-3 text-sm font-semibold uppercase tracking-wider hover:bg-black/90 transition-colors"
+              >
+                Get started
+                <ArrowRight className="w-4 h-4" />
+              </Link>
             </div>
           </div>
         </div>

@@ -1,6 +1,6 @@
 import { ReactNode, useEffect, useState } from 'react';
 import { useNavigate, Link, useLocation } from 'react-router-dom';
-import { Package, Layers, LogOut, Home, MessageSquare, FolderTree } from 'lucide-react';
+import { Package, Layers, LogOut, Home, MessageSquare, FolderTree, Megaphone } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { supabase } from '@/lib/supabase';
 
@@ -88,6 +88,15 @@ export default function AdminLayout({ children }: AdminLayoutProps) {
             >
               <MessageSquare className="w-5 h-5" />
               <span>Inquiries</span>
+            </Link>
+            <Link
+              to="/admin/rotating-messages"
+              className={`flex items-center gap-3 px-4 py-2 rounded-md transition-colors ${
+                isActive('/admin/rotating-messages') ? 'bg-primary text-primary-foreground' : 'hover:bg-muted'
+              }`}
+            >
+              <Megaphone className="w-5 h-5" />
+              <span>Homepage messages</span>
             </Link>
           </nav>
           

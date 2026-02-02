@@ -5,7 +5,8 @@ import Layout from '@/components/layout/Layout';
 import Breadcrumb from '@/components/navigation/Breadcrumb';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { supabase, Product, ProductImage } from '@/lib/supabase';
+import { Carousel, CarouselContent, CarouselItem, CarouselNext, CarouselPrevious, type CarouselApi } from '@/components/ui/carousel';
+import { supabase, ensurePublicStorageUrl, Product, ProductImage } from '@/lib/supabase';
 import { useQuoteCart } from '@/contexts/QuoteCartContext';
 import { toast } from 'sonner';
 
@@ -15,6 +16,8 @@ export default function ProductDetail() {
   const [productImages, setProductImages] = useState<string[]>([]);
   const [primaryImage, setPrimaryImage] = useState<string>('');
   const [isLoading, setIsLoading] = useState(true);
+  const [carouselApi, setCarouselApi] = useState<CarouselApi | null>(null);
+  const [currentSlide, setCurrentSlide] = useState(0);
   const { addItem, items } = useQuoteCart();
   
   // Check if this product is already in the cart
@@ -27,6 +30,20 @@ export default function ProductDetail() {
       fetchProduct();
     }
   }, [productId]);
+
+  // Refetch when user returns to this tab so newly added images from admin show
+  useEffect(() => {
+    if (!productId) return;
+    const onVisible = () => { if (document.visibilityState === 'visible') fetchProduct(); };
+    document.addEventListener('visibilitychange', onVisible);
+    return () => document.removeEventListener('visibilitychange', onVisible);
+  }, [productId]);
+
+  useEffect(() => {
+    if (!carouselApi || !productImages.length) return;
+    setCurrentSlide(carouselApi.selectedScrollSnap());
+    carouselApi.on('select', () => setCurrentSlide(carouselApi.selectedScrollSnap()));
+  }, [carouselApi, productImages.length]);
 
   const fetchProduct = async () => {
     if (!productId) return;
@@ -47,25 +64,29 @@ export default function ProductDetail() {
       console.log('Product data loaded:', productData);
       console.log('Product specifications:', productData?.specifications);
 
-      // Fetch product images
+      // Fetch ALL product images (product_images table) in display order
       const { data: imagesData, error: imagesError } = await supabase
         .from('product_images')
         .select('image_path, is_primary, display_order')
         .eq('product_id', productId)
-        .order('is_primary', { ascending: false })
-        .order('display_order');
+        .order('display_order', { ascending: true });
 
-      if (!imagesError && imagesData) {
-        const images = imagesData.map(img => img.image_path);
-        setProductImages(images);
-        const primary = imagesData.find(img => img.is_primary)?.image_path || images[0] || productData?.image || '';
-        setPrimaryImage(primary);
-      } else {
-        // Fallback to product.image if no images in product_images table
-        if (productData?.image) {
-          setPrimaryImage(productData.image);
-          setProductImages([productData.image]);
-        }
+      const fromTable = (imagesData || []).map(img => ensurePublicStorageUrl(img.image_path) || img.image_path);
+      const legacyUrl = productData?.image ? (ensurePublicStorageUrl(productData.image) || productData.image) : '';
+
+      // Show both: legacy product.image first (if not duplicate), then all from product_images
+      const allImages: string[] = [];
+      if (legacyUrl && !fromTable.includes(legacyUrl)) {
+        allImages.push(legacyUrl);
+      }
+      allImages.push(...fromTable);
+
+      if (allImages.length > 0) {
+        setProductImages(allImages);
+        setPrimaryImage(allImages[0]);
+      } else if (legacyUrl) {
+        setProductImages([legacyUrl]);
+        setPrimaryImage(legacyUrl);
       }
     } catch (error: any) {
       console.error('Failed to fetch product:', error);
@@ -149,26 +170,67 @@ export default function ProductDetail() {
       <section className="industrial-section">
         <div className="industrial-container py-8">
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 lg:gap-12">
-            {/* Product Image - Left Side */}
+            {/* Product images: always use carousel so user can swipe left/right (1, 2, 3…) */}
             <div className="relative">
-              <div className={`aspect-square bg-secondary rounded-lg overflow-hidden ${isOutOfStock ? 'grayscale opacity-60' : ''}`}>
-                {primaryImage ? (
-                  <img 
-                    src={primaryImage} 
-                    alt={product.name} 
-                    className="w-full h-full object-cover"
-                  />
-                ) : (
+              {productImages.length >= 1 ? (
+                <>
+                  <Carousel
+                    setApi={setCarouselApi}
+                    opts={{ align: 'start', loop: productImages.length > 1, dragFree: false }}
+                    className={`w-full rounded-lg overflow-hidden relative ${isOutOfStock ? 'grayscale opacity-60' : ''}`}
+                  >
+                    <CarouselContent className="ml-0">
+                      {productImages.map((img, idx) => (
+                        <CarouselItem key={idx} className="pl-0">
+                          <div className="aspect-square bg-secondary rounded-lg overflow-hidden">
+                            <img
+                              src={ensurePublicStorageUrl(img) || img}
+                              alt={`${product.name} – image ${idx + 1}`}
+                              className="w-full h-full object-cover select-none"
+                              draggable={false}
+                            />
+                          </div>
+                        </CarouselItem>
+                      ))}
+                    </CarouselContent>
+                    {productImages.length > 1 && (
+                      <>
+                        <CarouselPrevious className="left-2 border-0 bg-background/80 shadow" />
+                        <CarouselNext className="right-2 border-0 bg-background/80 shadow" />
+                      </>
+                    )}
+                  </Carousel>
+                  {/* Dots 1, 2, 3… – tap to jump, swipe left/right to see all images */}
+                  <div className="flex justify-center gap-2 mt-3 flex-wrap">
+                    {productImages.map((_, idx) => (
+                      <button
+                        key={idx}
+                        type="button"
+                        aria-label={`View image ${idx + 1}`}
+                        onClick={() => carouselApi?.scrollTo(idx)}
+                        className={`min-w-[2rem] h-8 rounded-full text-sm font-medium transition-colors ${
+                          currentSlide === idx
+                            ? 'bg-primary text-primary-foreground'
+                            : 'bg-muted text-muted-foreground hover:bg-muted/80'
+                        }`}
+                      >
+                        {idx + 1}
+                      </button>
+                    ))}
+                  </div>
+                </>
+              ) : (
+                <div className={`aspect-square bg-secondary rounded-lg overflow-hidden ${isOutOfStock ? 'grayscale opacity-60' : ''}`}>
                   <div className="w-full h-full flex items-center justify-center">
                     <div className="w-32 h-32 bg-muted-foreground/20 rounded" />
                   </div>
-                )}
-              </div>
-              
+                </div>
+              )}
+
               {/* Status Badge */}
               {product.status && product.status !== 'published' && (
-                <div className="absolute top-4 left-4">
-                  <Badge 
+                <div className="absolute top-4 left-4 z-10">
+                  <Badge
                     className={
                       product.status === 'out_of_stock' ? 'bg-orange-500 hover:bg-orange-600' :
                       product.status === 'discontinued' ? 'bg-red-500 hover:bg-red-600' :
@@ -181,23 +243,6 @@ export default function ProductDetail() {
                      product.status === 'hidden' ? 'Hidden' :
                      product.status}
                   </Badge>
-                </div>
-              )}
-
-              {/* Additional Images */}
-              {productImages.length > 1 && (
-                <div className="grid grid-cols-4 gap-2 mt-4">
-                  {productImages.slice(0, 4).map((img, idx) => (
-                    <button
-                      key={idx}
-                      onClick={() => setPrimaryImage(img)}
-                      className={`aspect-square rounded overflow-hidden border-2 transition-colors ${
-                        primaryImage === img ? 'border-primary' : 'border-border hover:border-primary/50'
-                      }`}
-                    >
-                      <img src={img} alt={`${product.name} ${idx + 1}`} className="w-full h-full object-cover" />
-                    </button>
-                  ))}
                 </div>
               )}
             </div>

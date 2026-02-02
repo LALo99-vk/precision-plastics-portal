@@ -20,6 +20,7 @@ import AdminProducts from "./pages/admin/AdminProducts";
 import AdminMaterials from "./pages/admin/AdminMaterials";
 import AdminCategories from "./pages/admin/AdminCategories";
 import AdminInquiries from "./pages/admin/AdminInquiries";
+import AdminRotatingMessages from "./pages/admin/AdminRotatingMessages";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -30,7 +31,7 @@ const App = () => (
       <TooltipProvider>
         <Toaster />
         <Sonner />
-        <BrowserRouter>
+        <BrowserRouter future={{ v7_startTransition: true, v7_relativeSplatPath: true }}>
           <Routes>
             <Route path="/" element={<Index />} />
             <Route path="/products" element={<Products />} />
@@ -48,6 +49,7 @@ const App = () => (
             <Route path="/admin/materials" element={<AdminMaterials />} />
             <Route path="/admin/categories" element={<AdminCategories />} />
             <Route path="/admin/inquiries" element={<AdminInquiries />} />
+            <Route path="/admin/rotating-messages" element={<AdminRotatingMessages />} />
             <Route path="*" element={<NotFound />} />
           </Routes>
         </BrowserRouter>

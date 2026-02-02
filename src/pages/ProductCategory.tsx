@@ -6,7 +6,7 @@ import Breadcrumb from '@/components/navigation/Breadcrumb';
 import FilterPanel from '@/components/products/FilterPanel';
 import ProductCard from '@/components/products/ProductCard';
 import { Button } from '@/components/ui/button';
-import { supabase, Product, ProductImage, ProductCategory as ProductCategoryType } from '@/lib/supabase';
+import { supabase, ensurePublicStorageUrl, Product, ProductImage, ProductCategory as ProductCategoryType } from '@/lib/supabase';
 import { compoundFilters, stockShapeFilters } from '@/data/products';
 
 export default function ProductCategoryPage() {
@@ -336,7 +336,8 @@ export default function ProductCategoryPage() {
                     else if (isWide) colSpan = "md:col-span-2 md:row-span-1";
                     else if (isTall) colSpan = "md:col-span-1 md:row-span-2";
 
-                    const imageSrc = productImages[product.id] || product.image;
+                    const rawImage = productImages[product.id] || product.image;
+                    const imageSrc = rawImage ? (ensurePublicStorageUrl(rawImage) || rawImage) : undefined;
 
                     return (
                       <div key={product.id} className={`group relative rounded-3xl overflow-hidden border-4 border-slate-100 bg-white hover:border-slate-900 transition-all duration-300 ${colSpan}`}>

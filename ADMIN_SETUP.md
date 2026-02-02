@@ -28,8 +28,9 @@ npm install @supabase/supabase-js
 1. Go to **Storage** in Supabase Dashboard
 2. Click **Create Bucket**
 3. Name: `product-images`
-4. Make it **Public** (or set up proper access policies)
+4. Turn **Public** ON (required for category/product image URLs to load; otherwise you get 400 when viewing images)
 5. Click **Create**
+6. In **SQL Editor**, run `storage-policies.sql` so authenticated users can upload and everyone can read
 
 ## Step 4: Configure Environment Variables
 
@@ -74,9 +75,9 @@ VITE_ADMIN_PASSWORD=your_admin_password_here
 
 ## Troubleshooting
 
-### Images not uploading?
-- Check that the `product-images` bucket exists in Supabase Storage
-- Verify the bucket is set to Public or has proper access policies
+### Images not uploading or 400 when loading images?
+- Create the `product-images` bucket in Storage and set it to **Public**
+- Run `storage-policies.sql` in SQL Editor so RLS allows read (SELECT) for everyone and upload (INSERT) for authenticated users
 - Check browser console for errors
 
 ### Database errors?

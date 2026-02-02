@@ -11,6 +11,24 @@ if (!supabaseUrl || !supabaseAnonKey) {
 
 export const supabase = createClient(supabaseUrl, supabaseAnonKey);
 
+/** Public URL for a file in storage (use this so images load; getPublicUrl() can return URLs that 400 without /public/). */
+export function getStoragePublicUrl(bucket: string, path: string): string {
+  const base = supabaseUrl.replace(/\/$/, '');
+  return `${base}/storage/v1/object/public/${bucket}/${path.replace(/^\//, '')}`;
+}
+
+/** Rewrite storage URL to use /object/public/ so it loads (fixes 400 on existing saved URLs). */
+export function ensurePublicStorageUrl(url: string | undefined): string | undefined {
+  if (!url || typeof url !== 'string') return url;
+  if (url.includes('/object/public/')) return url;
+  const match = url.match(/^(https?:\/\/[^/]+)\/storage\/v1\/object\/([^/]+)\/(.+)$/);
+  if (match) {
+    const [, base, bucket, path] = match;
+    return `${base}/storage/v1/object/public/${bucket}/${path}`;
+  }
+  return url;
+}
+
 // Database types
 export interface Product {
   id: string;
@@ -150,6 +168,19 @@ export interface ProductCategory {
   image?: string;
   status?: 'draft' | 'published' | 'hidden' | 'archived';
   productCount?: number;
+  created_at?: string;
+  updated_at?: string;
+}
+
+export type RotatingMessageType = 'quote' | 'offer' | 'notice' | 'general';
+
+export interface RotatingMessage {
+  id: string;
+  message: string;
+  type: RotatingMessageType;
+  duration_seconds: number;
+  sort_order: number;
+  active: boolean;
   created_at?: string;
   updated_at?: string;
 }

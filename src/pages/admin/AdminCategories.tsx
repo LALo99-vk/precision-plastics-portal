@@ -4,11 +4,11 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Badge } from '@/components/ui/badge';
 import AdminLayout from '@/components/admin/AdminLayout';
-import { supabase, ProductCategory } from '@/lib/supabase';
+import { supabase, getStoragePublicUrl, ensurePublicStorageUrl, ProductCategory } from '@/lib/supabase';
 import { toast } from 'sonner';
 
 export default function AdminCategories() {
@@ -55,19 +55,19 @@ export default function AdminCategories() {
       const fileName = `category-${Date.now()}-${Math.random().toString(36).substring(7)}.${fileExt}`;
       const filePath = `categories/${fileName}`;
 
-      // Upload to Supabase Storage
+      // Upload to Supabase Storage (contentType helps avoid 400 from strict MIME checks)
       const { error: uploadError } = await supabase.storage
         .from('product-images')
-        .upload(filePath, file, { upsert: false });
+        .upload(filePath, file, {
+          upsert: false,
+          contentType: file.type || 'image/jpeg',
+        });
 
       if (uploadError) throw uploadError;
 
-      // Get public URL
-      const { data: urlData } = supabase.storage
-        .from('product-images')
-        .getPublicUrl(filePath);
-
-      setFormData({ ...formData, image: urlData.publicUrl });
+      // Use correct public URL (with /public/ in path) so the image loads and doesn't 400
+      const publicUrl = getStoragePublicUrl('product-images', filePath);
+      setFormData((prev) => ({ ...prev, image: publicUrl }));
       toast.success('Image uploaded successfully!');
     } catch (error: any) {
       toast.error('Failed to upload image: ' + error.message);
@@ -201,9 +201,12 @@ export default function AdminCategories() {
                 Add Category
               </Button>
             </DialogTrigger>
-            <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+            <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto" aria-describedby="category-dialog-desc">
               <DialogHeader>
                 <DialogTitle>{editingCategory ? 'Edit Category' : 'Add New Category'}</DialogTitle>
+                <DialogDescription id="category-dialog-desc">
+                  {editingCategory ? 'Update category details and image.' : 'Create a new product category with name, description, status, and image.'}
+                </DialogDescription>
               </DialogHeader>
               <form onSubmit={handleSubmit} className="space-y-4">
                 <div>
@@ -253,9 +256,16 @@ export default function AdminCategories() {
                     <div className="mt-2 relative">
                       <div className="relative w-full h-48 border-2 border-dashed border-border rounded-lg overflow-hidden">
                         <img 
-                          src={formData.image} 
+                          src={ensurePublicStorageUrl(formData.image) || formData.image} 
                           alt="Category preview" 
                           className="w-full h-full object-cover"
+                          onError={(e) => {
+                            const el = e.currentTarget;
+                            const fixed = ensurePublicStorageUrl(el.src);
+                            if (fixed && fixed !== el.src) {
+                              el.src = fixed;
+                            }
+                          }}
                         />
                         <Button
                           type="button"
@@ -324,9 +334,16 @@ export default function AdminCategories() {
                 <div className="aspect-video bg-gradient-to-br from-primary/5 to-destructive/5 relative overflow-hidden">
                   {category.image ? (
                     <img 
-                      src={category.image} 
+                      src={ensurePublicStorageUrl(category.image) || category.image} 
                       alt={category.name} 
                       className="w-full h-full object-cover"
+                      onError={(e) => {
+                        const el = e.currentTarget;
+                        const fixed = ensurePublicStorageUrl(el.src);
+                        if (fixed && fixed !== el.src) {
+                          el.src = fixed;
+                        }
+                      }}
                     />
                   ) : (
                     <div className="w-full h-full flex items-center justify-center">
