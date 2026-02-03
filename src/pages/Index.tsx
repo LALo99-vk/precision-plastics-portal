@@ -4,6 +4,29 @@ import { ArrowRight, FileText, Reply, Package } from 'lucide-react';
 import Layout from '@/components/layout/Layout';
 import { supabase, RotatingMessage, RotatingMessageType } from '@/lib/supabase';
 
+const CENTER_VIDEO_SRC = '/videos/12253750_1920_1080_30fps.mp4';
+const CENTER_VIDEO_POSTER = '/images/home/heromain2.jpg';
+
+function CenterMediaGrid() {
+  return (
+    <div className="md:col-span-4 flex flex-col relative min-h-[520px]">
+      <div className="rounded-[2rem] overflow-hidden bg-black w-full h-full min-h-[520px] relative">
+        <video
+          src={CENTER_VIDEO_SRC}
+          poster={CENTER_VIDEO_POSTER}
+          className="w-full h-full object-cover"
+          autoPlay
+          loop
+          muted
+          playsInline
+          aria-label="Nyloking & Co. – process"
+        />
+        <div className="absolute inset-0 bg-gradient-to-t from-black/20 to-transparent pointer-events-none" />
+      </div>
+    </div>
+  );
+}
+
 export default function Index() {
   const [messages, setMessages] = useState<RotatingMessage[]>([]);
   const [currentIndex, setCurrentIndex] = useState(0);
@@ -59,15 +82,15 @@ export default function Index() {
         </div>
 
         {/* 2. Bento Grid Layout */}
-        <div className="w-full max-w-[1300px] mx-auto px-4 md:px-6">
-          <div className="bg-white rounded-[2.5rem] p-6 md:p-8 shadow-lg">
-            <div className="grid grid-cols-1 md:grid-cols-12 gap-6 min-h-[500px]">
+        <div className="w-full max-w-[1500px] mx-auto px-4 md:px-8">
+          <div className="bg-white rounded-[2.5rem] p-6 md:p-10 shadow-lg">
+            <div className="grid grid-cols-1 md:grid-cols-12 gap-8 min-h-[600px]">
 
               {/* LEFT COLUMN: Company photos + CTA */}
-              <div className="md:col-span-4 bg-[#f0ebe0] rounded-[2rem] p-6 relative overflow-hidden flex flex-col min-h-[450px]">
-                <div className="flex flex-col gap-3 flex-1">
+              <div className="md:col-span-4 bg-[#f0ebe0] rounded-[2rem] p-6 relative overflow-hidden flex flex-col min-h-[560px]">
+                <div className="flex flex-col gap-4 flex-1">
                   {/* Company photo – primary */}
-                  <div className="relative flex-1 rounded-[1.5rem] overflow-hidden min-h-[180px]">
+                  <div className="relative flex-1 rounded-[1.5rem] overflow-hidden min-h-[240px]">
                     <img
                       src="/images/home/heromain2.jpg"
                       alt="Nyloking & Co. – company"
@@ -75,7 +98,7 @@ export default function Index() {
                     />
                   </div>
                   {/* Optional second company photo */}
-                  <div className="relative h-28 rounded-[1.25rem] overflow-hidden">
+                  <div className="relative h-40 rounded-[1.25rem] overflow-hidden">
                     <img
                       src="/images/home/heromain2.jpg"
                       alt="Nyloking & Co. – team or facility"
@@ -93,52 +116,13 @@ export default function Index() {
                 </Link>
               </div>
 
-              {/* CENTER: 3-column media grid – images and videos (add entries to centerMediaItems to show more) */}
-              <div className="md:col-span-4 flex flex-col gap-4 relative min-h-[400px]">
-                <div className="grid grid-cols-3 gap-3 h-full">
-                  {[
-                    { type: 'image' as const, src: '/images/home/heromain2.jpg', alt: 'Showcase 1' },
-                    { type: 'video' as const, src: '/images/home/heromain2.jpg', alt: 'Showcase video', poster: '/images/home/heromain2.jpg' },
-                    { type: 'image' as const, src: '/images/home/heromain2.jpg', alt: 'Showcase 2' },
-                  ].map((item, idx) => (
-                    <div
-                      key={idx}
-                      className="rounded-[1.5rem] overflow-hidden bg-black relative group min-h-[140px]"
-                    >
-                      {item.type === 'video' ? (
-                        <>
-                          <img
-                            src={item.poster || item.src}
-                            alt={item.alt}
-                            className="w-full h-full object-cover opacity-80 group-hover:opacity-100 transition-opacity duration-500"
-                          />
-                          <div className="absolute inset-0 flex items-center justify-center">
-                            <div className="w-12 h-12 rounded-full bg-white/20 backdrop-blur-sm border border-white/30 flex items-center justify-center group-hover:scale-110 transition-transform cursor-pointer">
-                              <div className="w-0 h-0 border-t-[6px] border-t-transparent border-l-[9px] border-l-white border-b-[6px] border-b-transparent ml-0.5" />
-                            </div>
-                          </div>
-                          <div className="absolute inset-0 bg-gradient-to-t from-black/40 to-transparent" />
-                          {/* To use a real video later: add <video> with src and swap click to play */}
-                        </>
-                      ) : (
-                        <>
-                          <img
-                            src={item.src}
-                            alt={item.alt}
-                            className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500"
-                          />
-                          <div className="absolute inset-0 bg-gradient-to-t from-black/20 to-transparent" />
-                        </>
-                      )}
-                    </div>
-                  ))}
-                </div>
-              </div>
+              {/* CENTER: 3-column media grid – images and videos; use real .mp4/.webm URLs in src for video slots */}
+              <CenterMediaGrid />
 
               {/* RIGHT COLUMN: Spotlight product, Awards, Instagram */}
-              <div className="md:col-span-4 flex flex-col gap-4 h-full">
+              <div className="md:col-span-4 flex flex-col gap-5 h-full min-h-[560px]">
                 {/* 1. Spotlight / “New” product */}
-                <div className="rounded-[2rem] overflow-hidden bg-black relative group min-h-[160px]">
+                <div className="rounded-[2rem] overflow-hidden bg-black relative group min-h-[220px] flex-1">
                   <img
                     src="/images/home/heromain2.jpg"
                     alt="Spotlight product"
@@ -155,7 +139,7 @@ export default function Index() {
                 </div>
 
                 {/* 2. Awards / certifications */}
-                <div className="rounded-[2rem] bg-[#f0ebe0] p-5">
+                <div className="rounded-[2rem] bg-[#f0ebe0] p-6">
                   <p className="text-[10px] uppercase font-bold text-muted-foreground tracking-wider mb-3">Awards & certifications</p>
                   <div className="flex flex-wrap gap-3 items-center">
                     {/* Placeholder badges – replace with real cert logos or text */}
@@ -167,8 +151,8 @@ export default function Index() {
 
                 {/* 3. From our Instagram / social feed */}
                 <div className="rounded-[2rem] overflow-hidden">
-                  <p className="text-[10px] uppercase font-bold text-muted-foreground tracking-wider mb-2 px-1">From our Instagram</p>
-                  <div className="grid grid-cols-3 gap-1.5">
+                  <p className="text-[10px] uppercase font-bold text-muted-foreground tracking-wider mb-3 px-1">From our Instagram</p>
+                  <div className="grid grid-cols-3 gap-2">
                     {[1, 2, 3].map((i) => (
                       <a
                         key={i}
@@ -217,7 +201,7 @@ export default function Index() {
         </div>
 
         {/* How it works – 3 steps, bold and clear */}
-        <div className="w-full max-w-[1300px] mx-auto px-4 md:px-6 mt-8 mb-12">
+        <div className="w-full max-w-[1500px] mx-auto px-4 md:px-8 mt-8 mb-12">
           <div className="bg-white rounded-[2.5rem] p-6 md:p-10 shadow-lg">
             <h2 className="text-2xl md:text-3xl font-bold tracking-tight text-center mb-2">
               How it works
@@ -275,6 +259,17 @@ export default function Index() {
                 <ArrowRight className="w-4 h-4" />
               </Link>
             </div>
+          </div>
+        </div>
+
+        {/* Trust strip – edit numbers/copy as needed */}
+        <div className="w-full max-w-[1500px] mx-auto px-4 md:px-8 mt-8 mb-16">
+          <div className="rounded-[2rem] bg-[#f0ebe0] border border-black/5 px-6 py-5 flex flex-wrap items-center justify-center gap-x-10 gap-y-3 text-center">
+            <span className="text-sm font-semibold uppercase tracking-wider text-black/80">Quality materials</span>
+            <span className="text-black/30 hidden sm:inline">·</span>
+            <span className="text-sm font-semibold uppercase tracking-wider text-black/80">Reliable supply</span>
+            <span className="text-black/30 hidden sm:inline">·</span>
+            <span className="text-sm font-semibold uppercase tracking-wider text-black/80">Trusted by industry</span>
           </div>
         </div>
       </section>
