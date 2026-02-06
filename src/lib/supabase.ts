@@ -184,3 +184,20 @@ export interface RotatingMessage {
   created_at?: string;
   updated_at?: string;
 }
+
+export interface PriceListFolder {
+  id: string;
+  title: string;
+  parent_id: string | null;
+  sort_order: number;
+  created_at?: string;
+}
+
+export interface PriceListSheet {
+  id: string;
+  title: string;
+  file_path: string;
+  folder_id: string | null;
+  sort_order: number;
+  created_at?: string;
+}

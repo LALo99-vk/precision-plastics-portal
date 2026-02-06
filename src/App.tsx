@@ -21,6 +21,8 @@ import AdminMaterials from "./pages/admin/AdminMaterials";
 import AdminCategories from "./pages/admin/AdminCategories";
 import AdminInquiries from "./pages/admin/AdminInquiries";
 import AdminRotatingMessages from "./pages/admin/AdminRotatingMessages";
+import AdminPriceList from "./pages/admin/AdminPriceList";
+import PriceList from "./pages/PriceList";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -42,6 +44,7 @@ const App = () => (
             <Route path="/industries" element={<Industries />} />
             <Route path="/industries/:industryId" element={<IndustryDetail />} />
             <Route path="/quote-cart" element={<QuoteCart />} />
+            <Route path="/price-list" element={<PriceList />} />
             <Route path="/contact" element={<Contact />} />
             <Route path="/about" element={<About />} />
             <Route path="/admin/login" element={<AdminLogin />} />
@@ -50,6 +53,7 @@ const App = () => (
             <Route path="/admin/categories" element={<AdminCategories />} />
             <Route path="/admin/inquiries" element={<AdminInquiries />} />
             <Route path="/admin/rotating-messages" element={<AdminRotatingMessages />} />
+            <Route path="/admin/price-list" element={<AdminPriceList />} />
             <Route path="*" element={<NotFound />} />
           </Routes>
         </BrowserRouter>

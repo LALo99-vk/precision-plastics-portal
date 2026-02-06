@@ -2,6 +2,7 @@ import { useEffect, useState, useRef } from 'react';
 import { Link } from 'react-router-dom';
 import { ArrowRight, FileText, Reply, Package } from 'lucide-react';
 import Layout from '@/components/layout/Layout';
+import NylokingLogo from '@/components/layout/NylokingLogo';
 import { supabase, RotatingMessage, RotatingMessageType } from '@/lib/supabase';
 
 const CENTER_VIDEO_SRC = '/videos/12253750_1920_1080_30fps.mp4';
@@ -71,12 +72,11 @@ export default function Index() {
         {/* 1. Main Headline Area */}
         <div className="w-full max-w-[1400px] mx-auto px-4 md:px-8 mb-8">
           <div className="flex flex-col items-center justify-center text-center">
-            <h1 className="text-[12vw] md:text-[10vw] xl:text-[7.5rem] font-light tracking-tight leading-[0.9] flex flex-wrap items-center justify-center gap-x-4 gap-y-2">
-              <span>NYLOKING</span>
-              <span className="inline-flex items-center justify-center px-6 py-1 md:px-10 md:py-3 rounded-[3rem] border-2 border-black text-[4vw] md:text-[3vw] xl:text-5xl font-normal bg-transparent">
-                & CO
+            <h1 className="flex flex-col items-center leading-[0.9]">
+              <NylokingLogo className="w-[90vw] md:w-[75vw] xl:w-[1050px] h-auto" />
+              <span className="text-[3vw] md:text-[2vw] xl:text-[1.5rem] font-semibold tracking-[0.2em] uppercase mt-1">
+                House of Engineering Plastics
               </span>
-              <span className="font-bold">PLASTICS</span>
             </h1>
           </div>
         </div>

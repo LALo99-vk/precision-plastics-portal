@@ -11,6 +11,7 @@ import { Badge } from '@/components/ui/badge';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import AdminLayout from '@/components/admin/AdminLayout';
 import { supabase, QuotationInquiry, QuotationItem, InquiryAttachment, InquiryHistory, ContactSubmission } from '@/lib/supabase';
+import { generateQuotationExcel, downloadBlob, type QuotationLineItem } from '@/lib/generateQuotationExcel';
 import { toast } from 'sonner';
 
 export default function AdminInquiries() {
@@ -29,6 +30,12 @@ export default function AdminInquiries() {
   const [dateFrom, setDateFrom] = useState('');
   const [dateTo, setDateTo] = useState('');
   const [adminNotes, setAdminNotes] = useState('');
+  const [isQuotationDialogOpen, setIsQuotationDialogOpen] = useState(false);
+  const [quotationLineItems, setQuotationLineItems] = useState<QuotationLineItem[]>([]);
+  const [quotationDelivery, setQuotationDelivery] = useState(0);
+  const [quotationTaxPercent, setQuotationTaxPercent] = useState(0);
+  const [quotationNotes, setQuotationNotes] = useState('');
+  const [isGeneratingQuotation, setIsGeneratingQuotation] = useState(false);
 
   useEffect(() => {
     fetchInquiries();
@@ -224,6 +231,63 @@ export default function AdminInquiries() {
     setAdminNotes(inquiry.admin_notes || '');
     setIsDialogOpen(true);
     await fetchInquiryDetails(inquiry.id);
+  };
+
+  const openQuotationDialog = () => {
+    const lineItems: QuotationLineItem[] = inquiryItems.map((item) => ({
+      ...item,
+      unitPrice: 0,
+      amount: 0,
+    }));
+    setQuotationLineItems(lineItems);
+    setQuotationDelivery(0);
+    setQuotationTaxPercent(0);
+    setQuotationNotes('');
+    setIsQuotationDialogOpen(true);
+  };
+
+  const updateQuotationUnitPrice = (itemId: string, unitPrice: number) => {
+    setQuotationLineItems((prev) =>
+      prev.map((item) =>
+        item.id === itemId
+          ? { ...item, unitPrice, amount: item.quantity * unitPrice }
+          : item,
+      ),
+    );
+  };
+
+  const handleGenerateQuotation = async () => {
+    if (!selectedInquiry) return;
+    const itemsWithAmounts: QuotationLineItem[] = quotationLineItems.map((item) => ({
+      ...item,
+      amount: item.quantity * item.unitPrice,
+    }));
+    setIsGeneratingQuotation(true);
+    try {
+      const blob = await generateQuotationExcel(selectedInquiry, {
+        items: itemsWithAmounts,
+        deliveryCharge: quotationDelivery,
+        taxPercent: quotationTaxPercent,
+        notes: quotationNotes,
+      });
+      const filename = `Quotation_${selectedInquiry.inquiry_number.replace(/\s/g, '_')}.xlsx`;
+      downloadBlob(blob, filename);
+      await supabase
+        .from('quotation_inquiries')
+        .update({ status: 'quoted', quoted_at: new Date().toISOString() })
+        .eq('id', selectedInquiry.id);
+      toast.success('Quotation downloaded. Inquiry marked as quoted.');
+      setIsQuotationDialogOpen(false);
+      fetchInquiries();
+      if (selectedInquiry) {
+        const updated = inquiries.find((i) => i.id === selectedInquiry.id);
+        if (updated) setSelectedInquiry({ ...updated, status: 'quoted', quoted_at: new Date().toISOString() });
+      }
+    } catch (error: any) {
+      toast.error('Failed to generate quotation: ' + error.message);
+    } finally {
+      setIsGeneratingQuotation(false);
+    }
   };
 
   const getStatusBadge = (status: string) => {
@@ -472,6 +536,17 @@ export default function AdminInquiries() {
                         </div>
                       ))}
                     </div>
+                    {inquiryItems.length > 0 && (
+                      <Button
+                        type="button"
+                        variant="default"
+                        className="mt-3"
+                        onClick={openQuotationDialog}
+                      >
+                        <FileText className="w-4 h-4 mr-2" />
+                        Create quotation
+                      </Button>
+                    )}
                   </div>
 
                   {inquiryAttachments.length > 0 && (
@@ -534,6 +609,103 @@ export default function AdminInquiries() {
                 </div>
               </>
             )}
+          </DialogContent>
+        </Dialog>
+
+        {/* Create quotation – prices and download */}
+        <Dialog open={isQuotationDialogOpen} onOpenChange={setIsQuotationDialogOpen}>
+          <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto" aria-describedby="quotation-dialog-desc">
+            <DialogDescription id="quotation-dialog-desc" className="sr-only">
+              Enter unit prices and charges to generate the quotation Excel. Template is editable in src/config/quotationTemplate.ts.
+            </DialogDescription>
+            <DialogHeader>
+              <DialogTitle>Create quotation</DialogTitle>
+            </DialogHeader>
+            <div className="space-y-4">
+              <p className="text-sm text-muted-foreground">
+                Enter unit price for each item. Amount is calculated automatically. Then generate and download the Excel to send to the customer.
+              </p>
+              <div className="border rounded-lg overflow-hidden">
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>Product</TableHead>
+                      <TableHead>Category</TableHead>
+                      <TableHead>Qty</TableHead>
+                      <TableHead>Unit price</TableHead>
+                      <TableHead>Amount</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {quotationLineItems.map((item) => (
+                      <TableRow key={item.id}>
+                        <TableCell className="font-medium">{item.product_name}</TableCell>
+                        <TableCell className="text-muted-foreground">{item.product_category}</TableCell>
+                        <TableCell>{item.quantity}</TableCell>
+                        <TableCell>
+                          <Input
+                            type="number"
+                            min={0}
+                            step={0.01}
+                            value={item.unitPrice || ''}
+                            onChange={(e) => updateQuotationUnitPrice(item.id, Number(e.target.value) || 0)}
+                            className="w-28"
+                          />
+                        </TableCell>
+                        <TableCell className="font-medium">
+                          {(item.quantity * (item.unitPrice || 0)).toFixed(2)}
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              </div>
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <Label>Delivery charge</Label>
+                  <Input
+                    type="number"
+                    min={0}
+                    step={0.01}
+                    value={quotationDelivery || ''}
+                    onChange={(e) => setQuotationDelivery(Number(e.target.value) || 0)}
+                  />
+                </div>
+                <div>
+                  <Label>Tax (%)</Label>
+                  <Input
+                    type="number"
+                    min={0}
+                    max={100}
+                    step={0.1}
+                    value={quotationTaxPercent || ''}
+                    onChange={(e) => setQuotationTaxPercent(Number(e.target.value) || 0)}
+                  />
+                </div>
+              </div>
+              <div>
+                <Label>Notes / terms (optional)</Label>
+                <Textarea
+                  value={quotationNotes}
+                  onChange={(e) => setQuotationNotes(e.target.value)}
+                  rows={2}
+                  placeholder="Additional terms or notes for this quotation"
+                />
+              </div>
+              <div className="flex justify-end gap-2 pt-2">
+                <Button variant="outline" onClick={() => setIsQuotationDialogOpen(false)}>
+                  Cancel
+                </Button>
+                <Button onClick={handleGenerateQuotation} disabled={isGeneratingQuotation}>
+                  {isGeneratingQuotation ? 'Generating…' : (
+                    <>
+                      <Download className="w-4 h-4 mr-2" />
+                      Generate & download
+                    </>
+                  )}
+                </Button>
+              </div>
+            </div>
           </DialogContent>
         </Dialog>
       </div>

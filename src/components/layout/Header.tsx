@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import { X } from 'lucide-react';
 import { useQuoteCart } from '@/contexts/QuoteCartContext';
+import NylokingLogo from './NylokingLogo';
 
 export default function Header() {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
@@ -14,18 +15,14 @@ export default function Header() {
 
   return (
     <header className="fixed top-0 left-0 right-0 z-50 py-4 px-6 bg-[#e8e4d8]/95 backdrop-blur-md transition-all duration-300">
-      <div className="max-w-[1600px] mx-auto flex items-center justify-between">
+      <div className="max-w-[1600px] mx-auto relative flex items-center justify-center">
 
-        {/* Left: Logo */}
-        <Link to="/" className="flex items-center gap-2 group">
-          <div className="w-8 h-8 bg-black rounded-full flex items-center justify-center text-white">
-            <span className="font-bold text-lg">N</span>
-          </div>
-          <div className="flex flex-col">
-            <span className="text-xs font-bold tracking-[0.2em] uppercase leading-none">Nyloking</span>
-            <span className="text-[10px] text-muted-foreground uppercase tracking-widest leading-none">& Co.</span>
-          </div>
-        </Link>
+        {/* Left: Logo — shown on every page except home */}
+        {pathname !== '/' && (
+          <Link to="/" className="absolute left-0 flex items-center">
+            <NylokingLogo className="h-[28px] w-auto sm:h-[32px]" />
+          </Link>
+        )}
 
         {/* Center: Pill Navigation */}
         <nav className="hidden lg:flex items-center bg-white border border-black/10 rounded-full px-2 py-1 shadow-sm">
@@ -33,13 +30,15 @@ export default function Header() {
           <span className="text-black/20">•</span>
           <Link to="/products" className="px-5 py-2 rounded-full text-sm font-medium hover:bg-black hover:text-white transition-all">PRODUCTS</Link>
           <span className="text-black/20">•</span>
+          <Link to="/price-list" className="px-5 py-2 rounded-full text-sm font-medium hover:bg-black hover:text-white transition-all">PRICE LIST</Link>
+          <span className="text-black/20">•</span>
           <Link to="/about" className="px-5 py-2 rounded-full text-sm font-medium hover:bg-black hover:text-white transition-all">ABOUT</Link>
           <span className="text-black/20">•</span>
           <Link to="/contact" className="px-5 py-2 rounded-full text-sm font-medium hover:bg-black hover:text-white transition-all">CONTACT</Link>
         </nav>
 
-        {/* Right: Cart & Menu */}
-        <div className="flex items-center gap-4">
+        {/* Right: Cart & Menu (absolute so nav stays centered) */}
+        <div className="absolute right-0 flex items-center gap-4">
           {/* Cart Pill */}
           <Link to="/quote-cart" className="hidden md:flex items-center gap-3 bg-white border border-black/10 rounded-full px-4 py-2 hover:shadow-md transition-all">
             <span className="text-sm font-bold tracking-wide">CART</span>
@@ -110,6 +109,13 @@ export default function Header() {
                     className={`px-4 py-3 rounded-lg transition-colors font-medium ${isActive('/industries') ? 'bg-black text-white' : 'hover:bg-black/5'}`}
                   >
                     Industries
+                  </Link>
+                  <Link
+                    to="/price-list"
+                    onClick={() => setMobileMenuOpen(false)}
+                    className={`px-4 py-3 rounded-lg transition-colors font-medium ${isActive('/price-list') ? 'bg-black text-white' : 'hover:bg-black/5'}`}
+                  >
+                    Price list
                   </Link>
                   <Link
                     to="/about"
