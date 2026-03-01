@@ -59,6 +59,10 @@ export default {
           bg: "hsl(var(--hero-bg))",
           fg: "hsl(var(--hero-fg))",
         },
+        marquee: {
+          DEFAULT: "hsl(var(--marquee))",
+          foreground: "hsl(var(--marquee-foreground))",
+        },
         sidebar: {
           DEFAULT: "hsl(var(--sidebar-background))",
           foreground: "hsl(var(--sidebar-foreground))",
@@ -71,6 +75,7 @@ export default {
         },
       },
       fontFamily: {
+        display: ['"Playfair Display"', 'Georgia', 'serif'],
         sans: ['Inter', 'system-ui', 'sans-serif'],
       },
       borderRadius: {

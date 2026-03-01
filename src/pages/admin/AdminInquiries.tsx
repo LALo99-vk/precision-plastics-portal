@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Search, Filter, Eye, MessageSquare, FileText, Download } from 'lucide-react';
+import { Search, Eye, FileText, Download, Mail, MessageCircle } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -503,6 +503,12 @@ export default function AdminInquiries() {
                       <Label>Phone</Label>
                       <p className="text-sm">{selectedInquiry.customer_phone || '-'}</p>
                     </div>
+                    {selectedInquiry.whatsapp_number && (
+                      <div>
+                        <Label>WhatsApp</Label>
+                        <p className="text-sm">{selectedInquiry.whatsapp_number}</p>
+                      </div>
+                    )}
                     <div>
                       <Label>Status</Label>
                       <div className="mt-1">{getStatusBadge(selectedInquiry.status)}</div>
@@ -513,12 +519,78 @@ export default function AdminInquiries() {
                     </div>
                   </div>
 
+                  {selectedInquiry.size_requirements && (
+                    <div>
+                      <Label>Size / dimensions & requirements</Label>
+                      <p className="text-sm mt-1 p-2 bg-muted rounded whitespace-pre-wrap">{selectedInquiry.size_requirements}</p>
+                    </div>
+                  )}
+                  {selectedInquiry.delivery_required !== undefined && (
+                    <div>
+                      <Label>Delivery needed</Label>
+                      <p className="text-sm">{selectedInquiry.delivery_required ? 'Yes' : 'No (pickup/self-collect)'}</p>
+                    </div>
+                  )}
+                  {selectedInquiry.company_address && (
+                    <div>
+                      <Label>Company / delivery address</Label>
+                      <p className="text-sm mt-1 p-2 bg-muted rounded whitespace-pre-wrap">{selectedInquiry.company_address}</p>
+                    </div>
+                  )}
+                  {selectedInquiry.company_details && (
+                    <div>
+                      <Label>Company details (GSTIN, etc.)</Label>
+                      <p className="text-sm mt-1 p-2 bg-muted rounded whitespace-pre-wrap">{selectedInquiry.company_details}</p>
+                    </div>
+                  )}
+                  {selectedInquiry.product_looking_for && (
+                    <div>
+                      <Label>Product requested / Looking for</Label>
+                      <p className="text-sm mt-1 p-2 bg-primary/10 rounded font-medium">{selectedInquiry.product_looking_for}</p>
+                    </div>
+                  )}
+
                   {selectedInquiry.message && (
                     <div>
                       <Label>Message</Label>
                       <p className="text-sm mt-1 p-2 bg-muted rounded">{selectedInquiry.message}</p>
                     </div>
                   )}
+
+                  <div className="flex flex-wrap gap-2">
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      onClick={() => {
+                        const subject = encodeURIComponent(`Quotation for inquiry ${selectedInquiry.inquiry_number}`);
+                        const body = encodeURIComponent(`Hi,\n\nPlease find the quotation for your inquiry ${selectedInquiry.inquiry_number} attached or in the follow-up.\n\nRegards`);
+                        window.location.href = `mailto:${selectedInquiry.customer_email}?subject=${subject}&body=${body}`;
+                      }}
+                    >
+                      <Mail className="w-4 h-4 mr-1" />
+                      Send quotation via Email
+                    </Button>
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      onClick={() => {
+                        const raw = selectedInquiry.whatsapp_number || selectedInquiry.customer_phone || '';
+                        const digits = raw.replace(/\D/g, '');
+                        const number = digits.startsWith('91') ? digits : digits ? `91${digits}` : '';
+                        if (!number) {
+                          toast.error('No WhatsApp or phone number available');
+                          return;
+                        }
+                        const text = encodeURIComponent(`Quotation for your inquiry ${selectedInquiry.inquiry_number}. We've attached the quotation sheet. Please check your email or we can share it here.`);
+                        window.open(`https://wa.me/${number}?text=${text}`, '_blank');
+                      }}
+                    >
+                      <MessageCircle className="w-4 h-4 mr-1" />
+                      Send quotation via WhatsApp
+                    </Button>
+                  </div>
 
                   <div>
                     <Label>Selected Products</Label>

@@ -138,6 +138,21 @@ export default function Products() {
               })}
             </div>
           )}
+
+          {/* Price catalogues & query CTA */}
+          <div className="mt-16 max-w-3xl mx-auto rounded-2xl bg-muted/50 border border-border p-6 md:p-8 text-center">
+            <p className="text-muted-foreground text-sm md:text-base leading-relaxed">
+              We have all the products you need — they may not all be listed on this website, but they&apos;re available at our shop. If the product you&apos;re looking for is not here, search in our{' '}
+              <Link to="/price-list" className="font-semibold text-primary hover:underline">
+                price catalogues
+              </Link>
+              {' '}or{' '}
+              <Link to="/contact" className="font-semibold text-primary hover:underline">
+                send us a query
+              </Link>
+              {' '}with the product details and requirements — we&apos;ll get back to you soon.
+            </p>
+          </div>
         </div>
       </section>
     </Layout>

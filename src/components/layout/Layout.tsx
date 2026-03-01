@@ -1,5 +1,5 @@
 import { ReactNode } from 'react';
-import Header from './Header';
+import CinematicNavbar from '@/components/CinematicNavbar';
 import Footer from './Footer';
 
 interface LayoutProps {
@@ -9,7 +9,9 @@ interface LayoutProps {
 export default function Layout({ children }: LayoutProps) {
   return (
     <div className="min-h-screen flex flex-col">
-      <Header />
+      <CinematicNavbar />
+      {/* Spacer for fixed navbar (2px accent + 72px bar + 1px border = 75px) */}
+      <div className="h-[75px]" />
       <main className="flex-1">
         {children}
       </main>

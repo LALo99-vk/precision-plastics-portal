@@ -114,6 +114,18 @@ export interface QuotationInquiry {
   closed_at?: string;
   created_at?: string;
   updated_at?: string;
+  /** Size/dimensions and other requirements for the product */
+  size_requirements?: string;
+  /** Whether delivery is needed */
+  delivery_required?: boolean;
+  /** Full address for delivery or company */
+  company_address?: string;
+  /** GSTIN, registration, or other company details */
+  company_details?: string;
+  /** WhatsApp number for sending quotation */
+  whatsapp_number?: string;
+  /** Product name/description when customer couldn't find it on site (request-a-quote for unlisted product) */
+  product_looking_for?: string;
 }
 
 export interface QuotationItem {
@@ -200,4 +212,14 @@ export interface PriceListSheet {
   folder_id: string | null;
   sort_order: number;
   created_at?: string;
+}
+
+export interface HeroImage {
+  id: string;
+  title: string;
+  image_url: string;
+  sort_order: number;
+  active: boolean;
+  created_at?: string;
+  updated_at?: string;
 }

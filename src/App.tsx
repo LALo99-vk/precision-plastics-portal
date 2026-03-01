@@ -22,6 +22,7 @@ import AdminCategories from "./pages/admin/AdminCategories";
 import AdminInquiries from "./pages/admin/AdminInquiries";
 import AdminRotatingMessages from "./pages/admin/AdminRotatingMessages";
 import AdminPriceList from "./pages/admin/AdminPriceList";
+import AdminHeroImages from "./pages/admin/AdminHeroImages";
 import PriceList from "./pages/PriceList";
 import NotFound from "./pages/NotFound";
 
@@ -54,6 +55,7 @@ const App = () => (
             <Route path="/admin/inquiries" element={<AdminInquiries />} />
             <Route path="/admin/rotating-messages" element={<AdminRotatingMessages />} />
             <Route path="/admin/price-list" element={<AdminPriceList />} />
+            <Route path="/admin/hero-images" element={<AdminHeroImages />} />
             <Route path="*" element={<NotFound />} />
           </Routes>
         </BrowserRouter>
