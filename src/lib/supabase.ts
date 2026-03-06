@@ -139,6 +139,40 @@ export interface QuotationItem {
   created_at?: string;
 }
 
+export interface QuotationDocument {
+  id: string;
+  inquiry_id: string;
+  token: string;
+  proforma_number: string;
+  pdf_url?: string;
+  line_items: QuotationPdfLineItem[];
+  subtotal: number;
+  tax_amount: number;
+  delivery_charge: number;
+  total_amount: number;
+  remark?: string;
+  transport?: string;
+  po_number?: string;
+  place_of_supply?: string;
+  status: 'draft' | 'sent' | 'viewed' | 'accepted' | 'rejected';
+  sent_at?: string;
+  viewed_at?: string;
+  accepted_at?: string;
+  rejected_at?: string;
+  created_at?: string;
+}
+
+export interface QuotationPdfLineItem {
+  description: string;
+  hsn_code: string;
+  qty: number;
+  unit: string;
+  rate: number;
+  discount_percent: number;
+  gst_percent: number;
+  amount: number;
+}
+
 export interface InquiryAttachment {
   id: string;
   inquiry_id: string;

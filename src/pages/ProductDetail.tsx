@@ -5,6 +5,7 @@ import Layout from '@/components/layout/Layout';
 import Breadcrumb from '@/components/navigation/Breadcrumb';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
+import { Input } from '@/components/ui/input';
 import { Carousel, CarouselContent, CarouselItem, CarouselNext, CarouselPrevious, type CarouselApi } from '@/components/ui/carousel';
 import { supabase, ensurePublicStorageUrl, Product, ProductImage } from '@/lib/supabase';
 import { useQuoteCart } from '@/contexts/QuoteCartContext';
@@ -18,8 +19,9 @@ export default function ProductDetail() {
   const [isLoading, setIsLoading] = useState(true);
   const [carouselApi, setCarouselApi] = useState<CarouselApi | null>(null);
   const [currentSlide, setCurrentSlide] = useState(0);
-  const { addItem, items } = useQuoteCart();
-  
+  const { addItem, items, updateQuantity } = useQuoteCart();
+  const [desiredQty, setDesiredQty] = useState<number>(1);
+ 
   // Check if this product is already in the cart
   const isInCart = product ? items.some(item => item.id === product.id) : false;
   const cartItem = product ? items.find(item => item.id === product.id) : null;
@@ -38,6 +40,12 @@ export default function ProductDetail() {
     document.addEventListener('visibilitychange', onVisible);
     return () => document.removeEventListener('visibilitychange', onVisible);
   }, [productId]);
+
+  useEffect(() => {
+    if (quantity > 0) {
+      setDesiredQty(quantity);
+    }
+  }, [quantity]);
 
   useEffect(() => {
     if (!carouselApi || !productImages.length) return;
@@ -97,15 +105,25 @@ export default function ProductDetail() {
   };
 
   const handleAddToQuote = () => {
-    if (product) {
-      const existingItem = items.find(i => i.id === product.id);
-      const newQuantity = existingItem ? existingItem.quantity + 1 : 1;
-      
+    if (!product) return;
+    if (!desiredQty || desiredQty <= 0) {
+      toast.error('Please enter a valid quantity (at least 1).');
+      return;
+    }
+
+    const safeQty = Math.max(1, Math.floor(desiredQty));
+
+    if (cartItem) {
+      updateQuantity(product.id, safeQty);
+      toast.success('Quantity updated in cart!', {
+        description: `${product.name} (Quantity: ${safeQty})`,
+        duration: 3000,
+      });
+    } else {
       addItem({ id: product.id, name: product.name, category: product.category });
-      
-      // Show success notification
+      updateQuantity(product.id, safeQty);
       toast.success('Product added to cart!', {
-        description: `${product.name} (Quantity: ${newQuantity})`,
+        description: `${product.name} (Quantity: ${safeQty})`,
         duration: 3000,
       });
     }
@@ -353,13 +371,47 @@ export default function ProductDetail() {
                 </p>
               </div>
 
-              {/* Call to Action Button */}
-              <div>
+              {/* Quantity selector + Call to Action Button */}
+              <div className="space-y-3">
+                <div className="flex items-center gap-3">
+                  <span className="text-sm font-medium text-muted-foreground">Required quantity</span>
+                  <div className="flex items-center gap-2">
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="icon"
+                      className="h-8 w-8"
+                      onClick={() => setDesiredQty(q => Math.max(1, (q || 1) - 1))}
+                      disabled={isUnavailable}
+                    >
+                      -
+                    </Button>
+                    <Input
+                      type="number"
+                      min={1}
+                      value={desiredQty}
+                      onChange={(e) => setDesiredQty(Number(e.target.value) || 1)}
+                      className="w-20 h-8 text-center"
+                      disabled={isUnavailable}
+                    />
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="icon"
+                      className="h-8 w-8"
+                      onClick={() => setDesiredQty(q => (q || 1) + 1)}
+                      disabled={isUnavailable}
+                    >
+                      +
+                    </Button>
+                  </div>
+                </div>
+
                 <Button
                   size="lg"
                   className={`w-full text-lg py-6 transition-all ${
-                    isInCart 
-                      ? 'bg-green-500 hover:bg-green-600 text-white' 
+                    isInCart
+                      ? 'bg-green-500 hover:bg-green-600 text-white'
                       : 'bg-primary hover:bg-primary/90 text-primary-foreground'
                   }`}
                   onClick={handleAddToQuote}
@@ -370,7 +422,7 @@ export default function ProductDetail() {
                   ) : isInCart ? (
                     <>
                       <Check className="mr-2 h-5 w-5" />
-                      Added to Cart {quantity > 1 ? `(${quantity})` : ''}
+                      In Cart ({quantity})
                     </>
                   ) : (
                     <>

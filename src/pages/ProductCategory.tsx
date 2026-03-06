@@ -168,7 +168,7 @@ export default function ProductCategoryPage() {
                   Tell us what you&apos;re looking for and we&apos;ll check availability and send you a quote.
                 </p>
                 <Button asChild>
-                  <Link to="/quote-cart">Request a quote for this product</Link>
+                  <Link to="/custom-quote">Request a custom quote</Link>
                 </Button>
               </div>
             </div>
@@ -177,8 +177,8 @@ export default function ProductCategoryPage() {
               <div className="mb-6 flex flex-wrap items-center justify-between gap-3">
                 <p className="text-sm text-black/50">
                   Need a product not listed here?{' '}
-                  <Link to="/quote-cart" className="font-medium text-primary hover:underline">
-                    Request a quote
+                  <Link to="/custom-quote" className="font-medium text-primary hover:underline">
+                    Request a custom quote
                   </Link>
                 </p>
               </div>

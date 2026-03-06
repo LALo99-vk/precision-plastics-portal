@@ -1,6 +1,6 @@
 import { ReactNode, useEffect, useState } from 'react';
 import { useNavigate, Link, useLocation } from 'react-router-dom';
-import { Package, Layers, LogOut, Home, MessageSquare, FolderTree, Megaphone, FileText, Image } from 'lucide-react';
+import { Package, Layers, LogOut, Home, MessageSquare, FolderTree, Megaphone, FileText } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { supabase } from '@/lib/supabase';
 
@@ -97,15 +97,6 @@ export default function AdminLayout({ children }: AdminLayoutProps) {
             >
               <Megaphone className="w-5 h-5" />
               <span>Homepage messages</span>
-            </Link>
-            <Link
-              to="/admin/hero-images"
-              className={`flex items-center gap-3 px-4 py-2 rounded-md transition-colors ${
-                isActive('/admin/hero-images') ? 'bg-primary text-primary-foreground' : 'hover:bg-muted'
-              }`}
-            >
-              <Image className="w-5 h-5" />
-              <span>Hero images</span>
             </Link>
             <Link
               to="/admin/price-list"

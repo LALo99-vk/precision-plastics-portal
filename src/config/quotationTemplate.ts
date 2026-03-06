@@ -1,43 +1,45 @@
 /**
- * Quotation template – editable company details and layout.
- * Change these values to match your branding. Logo path is relative to public (e.g. /images/logo.png).
+ * Proforma invoice template -- company details, bank info, terms.
+ * Edit these values to match your branding. Used by generateQuotationPdf.ts.
  */
 export const quotationTemplate = {
-  /** Company name shown on the quotation */
-  companyName: 'Nyloking & Co.',
-  /** Short tagline or legal name (optional) */
-  companyTagline: 'Precision Plastics',
-  /** Address lines (each item is a new line) */
-  companyAddress: ['Your address line 1', 'City, State, Postal Code', 'Country'],
-  /** Phone (optional) */
-  companyPhone: '',
-  /** Email (optional) */
-  companyEmail: '',
-  /** Website (optional) */
-  companyWebsite: '',
-  /**
-   * Logo image path (e.g. /images/company-logo.png).
-   * Put your logo in public/images/ and set this. Leave empty to hide logo.
-   */
-  logoPath: '/Users/test/NylokingCo/precision-plastics-portal/public/images/home/logo.png',
-  /** Default terms and conditions text at the bottom of the quotation */
-  defaultTerms: 'Prices valid for 30 days. Payment terms as agreed. Delivery subject to availability.',
-  /** Column headers for the items table (edit if you use different labels) */
-  columnHeaders: {
-    item: 'Item / Product',
-    category: 'Category',
-    quantity: 'Qty',
-    unitPrice: 'Unit Price',
-    amount: 'Amount',
-  },
-  /** Label for delivery charge row */
-  deliveryLabel: 'Delivery',
-  /** Label for tax row */
-  taxLabel: 'Tax',
-  /** Label for total row */
-  totalLabel: 'Total',
-  /** Quotation title (e.g. "QUOTATION" or "PRICE QUOTE") */
-  quotationTitle: 'QUOTATION',
+  companyName: 'NYLOKING & CO .,',
+  companyTagline: 'HOUSE OF ENGINEERING PLASTICS',
+  companyAddress: 'Factory & Office : No. 161/1, S.P. Road Bengaluru-560002 Karnataka, India,',
+  companyPhone: 'Mobile : 9448354795 222234795 / 22224200',
+  companyEmail: 'nylokingandco@gmail.com',
+  companyWebsite: 'www.nitinenterprise.com',
+  gstin: '29AABFN2443F1ZH',
+  state: 'KARNATAKA',
+  stateCode: 29,
+  panNo: 'AAQPA3577J',
+  msme: 'UDYAM-GJ-01-0042957',
+  logoPath: '/logo/mainlogo.png',
+
+  banks: [
+    {
+      bankName: 'HDFC BANK',
+      accountNo: '99909824032127',
+      ifsc: 'HDFC0000300',
+      branch: 'MANINAGAR.',
+    },
+    {
+      bankName: 'BANK OF BARODA',
+      accountNo: '36590200000031',
+      ifsc: 'BARB0SCIAHM',
+      branch: 'SCIENCE CITY ROAD.',
+    },
+  ],
+
+  terms: [
+    '# We are not responsible for any brekage, damage or loss in transit.',
+    '# Our responsibility\'s ceases the moment\'s good leave our premises.',
+    '# Subject to Ahmedabad Jurisdiction.',
+  ],
+
+  defaultRemark: '100% ADVANCE @ P.I.',
+
+  units: ['NOS', 'KG', 'MTR', 'SET', 'PCS', 'LTR', 'SQM', 'PAIR'] as const,
 } as const;
 
 export type QuotationTemplate = typeof quotationTemplate;

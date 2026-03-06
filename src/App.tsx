@@ -13,6 +13,7 @@ import MaterialDetail from "./pages/MaterialDetail";
 import Industries from "./pages/Industries";
 import IndustryDetail from "./pages/IndustryDetail";
 import QuoteCart from "./pages/QuoteCart";
+import CustomQuote from "./pages/CustomQuote";
 import Contact from "./pages/Contact";
 import About from "./pages/About";
 import AdminLogin from "./pages/admin/AdminLogin";
@@ -22,8 +23,8 @@ import AdminCategories from "./pages/admin/AdminCategories";
 import AdminInquiries from "./pages/admin/AdminInquiries";
 import AdminRotatingMessages from "./pages/admin/AdminRotatingMessages";
 import AdminPriceList from "./pages/admin/AdminPriceList";
-import AdminHeroImages from "./pages/admin/AdminHeroImages";
 import PriceList from "./pages/PriceList";
+import QuotationView from "./pages/QuotationView";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -45,6 +46,7 @@ const App = () => (
             <Route path="/industries" element={<Industries />} />
             <Route path="/industries/:industryId" element={<IndustryDetail />} />
             <Route path="/quote-cart" element={<QuoteCart />} />
+            <Route path="/custom-quote" element={<CustomQuote />} />
             <Route path="/price-list" element={<PriceList />} />
             <Route path="/contact" element={<Contact />} />
             <Route path="/about" element={<About />} />
@@ -55,7 +57,7 @@ const App = () => (
             <Route path="/admin/inquiries" element={<AdminInquiries />} />
             <Route path="/admin/rotating-messages" element={<AdminRotatingMessages />} />
             <Route path="/admin/price-list" element={<AdminPriceList />} />
-            <Route path="/admin/hero-images" element={<AdminHeroImages />} />
+            <Route path="/quotation/:token" element={<QuotationView />} />
             <Route path="*" element={<NotFound />} />
           </Routes>
         </BrowserRouter>
