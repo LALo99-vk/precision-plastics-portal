@@ -1,19 +1,36 @@
 import { useState, useEffect } from 'react';
-import { Search, Eye, FileText, Download, Mail, MessageCircle, Plus, Trash2, ExternalLink } from 'lucide-react';
+import {
+  Search, Eye, FileText, Download, Mail, MessageCircle, Plus, Trash2,
+  ExternalLink, ChevronLeft, ChevronRight, CheckCircle, XCircle,
+} from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
-import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { Badge } from '@/components/ui/badge';
+import {
+  Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle,
+} from '@/components/ui/dialog';
+import {
+  Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
+} from '@/components/ui/select';
+import {
+  Table, TableBody, TableCell, TableHead, TableHeader, TableRow,
+} from '@/components/ui/table';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import AdminLayout from '@/components/admin/AdminLayout';
-import { supabase, QuotationInquiry, QuotationItem, InquiryAttachment, InquiryHistory, ContactSubmission, QuotationDocument, QuotationPdfLineItem } from '@/lib/supabase';
+import { PageHeader } from '@/components/admin/PageHeader';
+import { StatusBadge } from '@/components/admin/StatusBadge';
+import { EmptyState } from '@/components/admin/EmptyState';
+import { LoadingState } from '@/components/admin/LoadingState';
+import {
+  supabase, QuotationInquiry, QuotationItem, InquiryAttachment,
+  InquiryHistory, ContactSubmission, QuotationDocument, QuotationPdfLineItem,
+} from '@/lib/supabase';
 import { generateQuotationPdf, downloadBlob, type QuotationPdfFormData } from '@/lib/generateQuotationPdf';
 import { quotationTemplate } from '@/config/quotationTemplate';
 import { toast } from 'sonner';
+
+const ITEMS_PER_PAGE = 10;
 
 function generateToken(): string {
   return crypto.randomUUID().replace(/-/g, '').slice(0, 24);
@@ -36,6 +53,8 @@ export default function AdminInquiries() {
   const [dateFrom, setDateFrom] = useState('');
   const [dateTo, setDateTo] = useState('');
   const [adminNotes, setAdminNotes] = useState('');
+  const [inqPage, setInqPage] = useState(1);
+  const [conPage, setConPage] = useState(1);
 
   // Quotation dialog state
   const [isQuotationDialogOpen, setIsQuotationDialogOpen] = useState(false);
@@ -84,28 +103,33 @@ export default function AdminInquiries() {
     if (docsRes.data) setInquiryDocuments(docsRes.data);
   };
 
-  const filterInquiries = () => {
-    let filtered = [...inquiries];
+  const applyFilters = <T extends { status: string; created_at?: string }>(
+    items: T[],
+    getSearchText: (i: T) => string,
+  ) => {
+    let filtered = [...items];
     if (searchQuery) {
       const q = searchQuery.toLowerCase();
-      filtered = filtered.filter(i => i.inquiry_number.toLowerCase().includes(q) || i.customer_name.toLowerCase().includes(q) || i.customer_company.toLowerCase().includes(q) || i.customer_email.toLowerCase().includes(q));
+      filtered = filtered.filter((i) => getSearchText(i).toLowerCase().includes(q));
     }
-    if (statusFilter !== 'all') filtered = filtered.filter(i => i.status === statusFilter);
-    if (dateFrom) filtered = filtered.filter(i => new Date(i.created_at || '') >= new Date(dateFrom));
-    if (dateTo) filtered = filtered.filter(i => new Date(i.created_at || '') <= new Date(dateTo + 'T23:59:59'));
+    if (statusFilter !== 'all') filtered = filtered.filter((i) => i.status === statusFilter);
+    if (dateFrom) filtered = filtered.filter((i) => new Date(i.created_at || '') >= new Date(dateFrom));
+    if (dateTo) filtered = filtered.filter((i) => new Date(i.created_at || '') <= new Date(dateTo + 'T23:59:59'));
+    return filtered;
+  };
+
+  const filterInquiries = () => {
+    const filtered = applyFilters(inquiries, (i) =>
+      `${i.inquiry_number} ${i.customer_name} ${i.customer_company} ${i.customer_email}`);
     setFilteredInquiries(filtered);
+    setInqPage(1);
   };
 
   const filterContacts = () => {
-    let filtered = [...contacts];
-    if (searchQuery) {
-      const q = searchQuery.toLowerCase();
-      filtered = filtered.filter(c => c.name.toLowerCase().includes(q) || c.company.toLowerCase().includes(q) || c.email.toLowerCase().includes(q) || c.subject.toLowerCase().includes(q));
-    }
-    if (statusFilter !== 'all') filtered = filtered.filter(c => c.status === statusFilter);
-    if (dateFrom) filtered = filtered.filter(c => new Date(c.created_at || '') >= new Date(dateFrom));
-    if (dateTo) filtered = filtered.filter(c => new Date(c.created_at || '') <= new Date(dateTo + 'T23:59:59'));
+    const filtered = applyFilters(contacts, (c) =>
+      `${c.name} ${c.company} ${c.email} ${c.subject}`);
     setFilteredContacts(filtered);
+    setConPage(1);
   };
 
   const handleStatusChange = async (inquiryId: string, newStatus: string) => {
@@ -147,7 +171,7 @@ export default function AdminInquiries() {
     await fetchInquiryDetails(inquiry.id);
   };
 
-  // ─── Quotation dialog ────────────────────────────────────
+  // Quotation dialog
   const openQuotationDialog = () => {
     if (!selectedInquiry) return;
     setQfProformaNo(selectedInquiry.inquiry_number);
@@ -159,16 +183,9 @@ export default function AdminInquiries() {
     setQfRemark(quotationTemplate.defaultRemark);
     setGeneratedDocId(null);
     setGeneratedToken(null);
-
     const items: QuotationPdfLineItem[] = inquiryItems.map((item) => ({
-      description: item.product_name,
-      hsn_code: '',
-      qty: item.quantity,
-      unit: 'NOS',
-      rate: 0,
-      discount_percent: 0,
-      gst_percent: 18,
-      amount: 0,
+      description: item.product_name, hsn_code: '', qty: item.quantity,
+      unit: 'NOS', rate: 0, discount_percent: 0, gst_percent: 18, amount: 0,
     }));
     if (items.length === 0) {
       items.push({ description: '', hsn_code: '', qty: 1, unit: 'NOS', rate: 0, discount_percent: 0, gst_percent: 18, amount: 0 });
@@ -178,7 +195,7 @@ export default function AdminInquiries() {
   };
 
   const updateLineItem = (index: number, field: keyof QuotationPdfLineItem, value: string | number) => {
-    setQfLineItems(prev => {
+    setQfLineItems((prev) => {
       const updated = [...prev];
       const item = { ...updated[index], [field]: value };
       const discounted = item.rate * (1 - item.discount_percent / 100);
@@ -188,13 +205,8 @@ export default function AdminInquiries() {
     });
   };
 
-  const addLineItem = () => {
-    setQfLineItems(prev => [...prev, { description: '', hsn_code: '', qty: 1, unit: 'NOS', rate: 0, discount_percent: 0, gst_percent: 18, amount: 0 }]);
-  };
-
-  const removeLineItem = (index: number) => {
-    setQfLineItems(prev => prev.filter((_, i) => i !== index));
-  };
+  const addLineItem = () => setQfLineItems((prev) => [...prev, { description: '', hsn_code: '', qty: 1, unit: 'NOS', rate: 0, discount_percent: 0, gst_percent: 18, amount: 0 }]);
+  const removeLineItem = (index: number) => setQfLineItems((prev) => prev.filter((_, i) => i !== index));
 
   const qfSubtotal = qfLineItems.reduce((s, it) => s + it.amount, 0);
   const qfTaxAmount = qfLineItems.reduce((s, it) => s + it.amount * (it.gst_percent / 100), 0);
@@ -202,60 +214,36 @@ export default function AdminInquiries() {
 
   const handleGeneratePdf = async () => {
     if (!selectedInquiry) return;
-    if (qfLineItems.length === 0 || qfLineItems.every(it => !it.description.trim())) {
+    if (qfLineItems.length === 0 || qfLineItems.every((it) => !it.description.trim())) {
       toast.error('Add at least one line item');
       return;
     }
     setIsGenerating(true);
     try {
       const formData: QuotationPdfFormData = {
-        proformaNumber: qfProformaNo,
-        date: qfDate,
-        poNumber: qfPoNumber,
-        placeOfSupply: qfPlaceOfSupply,
-        transport: qfTransport,
-        delivery: qfDelivery,
-        items: qfLineItems,
-        remark: qfRemark,
+        proformaNumber: qfProformaNo, date: qfDate, poNumber: qfPoNumber,
+        placeOfSupply: qfPlaceOfSupply, transport: qfTransport, delivery: qfDelivery,
+        items: qfLineItems, remark: qfRemark,
       };
-
       const blob = await generateQuotationPdf(selectedInquiry, formData);
       const token = generateToken();
-
-      // Upload PDF to storage
       const filePath = `${selectedInquiry.id}/${token}.pdf`;
       const { error: uploadErr } = await supabase.storage.from('quotation-pdfs').upload(filePath, blob, { contentType: 'application/pdf', upsert: true });
       if (uploadErr) throw uploadErr;
-
       const { data: urlData } = supabase.storage.from('quotation-pdfs').getPublicUrl(filePath);
-      const pdfUrl = urlData.publicUrl;
-
-      // Insert quotation document row
       const { data: doc, error: insertErr } = await supabase.from('quotation_documents').insert([{
-        inquiry_id: selectedInquiry.id,
-        token,
-        proforma_number: qfProformaNo,
-        pdf_url: pdfUrl,
-        line_items: qfLineItems,
-        subtotal: qfSubtotal,
-        tax_amount: qfTaxAmount,
-        delivery_charge: 0,
-        total_amount: qfGrandTotal,
-        remark: qfRemark,
-        transport: qfTransport,
-        po_number: qfPoNumber,
-        place_of_supply: qfPlaceOfSupply,
-        status: 'draft',
+        inquiry_id: selectedInquiry.id, token, proforma_number: qfProformaNo,
+        pdf_url: urlData.publicUrl, line_items: qfLineItems, subtotal: qfSubtotal,
+        tax_amount: qfTaxAmount, delivery_charge: 0, total_amount: qfGrandTotal,
+        remark: qfRemark, transport: qfTransport, po_number: qfPoNumber,
+        place_of_supply: qfPlaceOfSupply, status: 'draft',
       }]).select().single();
       if (insertErr) throw insertErr;
-
-      // Mark inquiry as quoted
       await supabase.from('quotation_inquiries').update({ status: 'quoted', quoted_at: new Date().toISOString() }).eq('id', selectedInquiry.id);
-
       downloadBlob(blob, `Quotation_${qfProformaNo.replace(/\s/g, '_')}.pdf`);
       setGeneratedDocId(doc?.id || null);
       setGeneratedToken(token);
-      toast.success('PDF generated and saved. You can now send it to the customer.');
+      toast.success('PDF generated and saved.');
       fetchInquiries();
       await fetchInquiryDetails(selectedInquiry.id);
     } catch (error: any) {
@@ -275,8 +263,7 @@ export default function AdminInquiries() {
     const url = getQuotationUrl(generatedToken);
     const subject = encodeURIComponent(`Quotation ${qfProformaNo} - Nyloking & Co.`);
     const body = encodeURIComponent(`Dear ${selectedInquiry.customer_name},\n\nYour quotation is ready. Please view and download it here:\n${url}\n\nThank you,\nNyloking & Co.`);
-    const mailtoLink = `mailto:${selectedInquiry.customer_email}?subject=${subject}&body=${body}`;
-    window.open(mailtoLink, '_blank');
+    window.open(`mailto:${selectedInquiry.customer_email}?subject=${subject}&body=${body}`, '_blank');
     navigator.clipboard.writeText(url).then(() => toast.success('Quotation link copied to clipboard')).catch(() => {});
     if (generatedDocId) {
       supabase.from('quotation_documents').update({ status: 'sent', sent_at: new Date().toISOString() }).eq('id', generatedDocId).then(() => {
@@ -312,33 +299,54 @@ export default function AdminInquiries() {
     await fetchInquiryDetails(selectedInquiry.id);
   };
 
-  const getStatusBadge = (status: string) => {
-    const colors: Record<string, string> = { new: 'bg-blue-500', in_review: 'bg-yellow-500', quoted: 'bg-green-500', closed: 'bg-gray-500', responded: 'bg-green-500', draft: 'bg-gray-400', sent: 'bg-blue-500', viewed: 'bg-yellow-500', accepted: 'bg-green-600', rejected: 'bg-red-500' };
-    return <Badge className={colors[status] || 'bg-gray-500'}>{status.replace('_', ' ')}</Badge>;
-  };
+  const formatDate = (d?: string) => d ? new Date(d).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' }) : '—';
 
-  const getDocStatusBadge = (status: string) => {
-    const colors: Record<string, string> = { draft: 'bg-gray-400', sent: 'bg-blue-500', viewed: 'bg-yellow-500', accepted: 'bg-green-600', rejected: 'bg-red-500' };
-    return <Badge className={colors[status] || 'bg-gray-500'}>{status}</Badge>;
-  };
+  // Pagination helpers
+  const paginate = <T,>(items: T[], page: number) =>
+    items.slice((page - 1) * ITEMS_PER_PAGE, page * ITEMS_PER_PAGE);
+  const totalInqPages = Math.ceil(filteredInquiries.length / ITEMS_PER_PAGE);
+  const totalConPages = Math.ceil(filteredContacts.length / ITEMS_PER_PAGE);
+
+  const PaginationBar = ({
+    current, total, onChange,
+  }: { current: number; total: number; onChange: (p: number) => void }) => (
+    total <= 1 ? null : (
+      <div className="flex items-center justify-between px-4 py-3 border-t border-border">
+        <span className="text-xs text-muted-foreground">
+          Page {current} of {total}
+        </span>
+        <div className="flex items-center gap-1">
+          <Button variant="outline" size="icon" className="h-7 w-7"
+            onClick={() => onChange(Math.max(1, current - 1))} disabled={current === 1}>
+            <ChevronLeft className="w-3.5 h-3.5" />
+          </Button>
+          <Button variant="outline" size="icon" className="h-7 w-7"
+            onClick={() => onChange(Math.min(total, current + 1))} disabled={current === total}>
+            <ChevronRight className="w-3.5 h-3.5" />
+          </Button>
+        </div>
+      </div>
+    )
+  );
 
   return (
     <AdminLayout>
-      <div className="max-w-[1600px] mx-auto">
-        <div className="mb-6">
-          <h1 className="text-3xl font-bold mb-2">Inquiry Management</h1>
-          <p className="text-muted-foreground">Manage quotation requests and contact submissions</p>
-        </div>
+      <div>
+        <PageHeader
+          title="Inquiries"
+          description="Manage quotation requests and contact submissions"
+        />
 
-        {/* Search and Filters */}
+        {/* Filters */}
         <div className="bg-background border border-border rounded-lg p-4 mb-4">
-          <div className="grid grid-cols-1 md:grid-cols-5 gap-4">
-            <div className="relative">
-              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-              <Input placeholder="Search..." value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)} className="pl-9" />
+          <div className="flex flex-col sm:flex-row gap-3">
+            <div className="relative flex-1">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+              <Input placeholder="Search by name, company, email…" value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)} className="pl-9 h-11 text-base" />
             </div>
             <Select value={statusFilter} onValueChange={setStatusFilter}>
-              <SelectTrigger><SelectValue placeholder="Status" /></SelectTrigger>
+              <SelectTrigger className="w-full sm:w-44 h-11 text-base"><SelectValue placeholder="Status" /></SelectTrigger>
               <SelectContent>
                 <SelectItem value="all">All Status</SelectItem>
                 <SelectItem value="new">New</SelectItem>
@@ -348,168 +356,287 @@ export default function AdminInquiries() {
                 <SelectItem value="responded">Responded</SelectItem>
               </SelectContent>
             </Select>
-            <Input type="date" value={dateFrom} onChange={(e) => setDateFrom(e.target.value)} />
-            <Input type="date" value={dateTo} onChange={(e) => setDateTo(e.target.value)} />
-            {(dateFrom || dateTo) && <Button variant="outline" onClick={() => { setDateFrom(''); setDateTo(''); }}>Clear Dates</Button>}
+            <Input type="date" value={dateFrom} onChange={(e) => setDateFrom(e.target.value)}
+              className="w-full sm:w-36" />
+            <Input type="date" value={dateTo} onChange={(e) => setDateTo(e.target.value)}
+              className="w-full sm:w-36" />
+            {(dateFrom || dateTo) && (
+              <Button variant="outline" size="sm" onClick={() => { setDateFrom(''); setDateTo(''); }}>
+                Clear dates
+              </Button>
+            )}
           </div>
         </div>
 
         <Tabs defaultValue="quotations" className="space-y-4">
-          <TabsList>
-            <TabsTrigger value="quotations">Quotation Requests ({filteredInquiries.length})</TabsTrigger>
-            <TabsTrigger value="contacts">Contact Submissions ({filteredContacts.length})</TabsTrigger>
+          <TabsList className="bg-background border border-border">
+            <TabsTrigger value="quotations">
+              Quotation Requests
+              <span className="ml-1.5 text-xs bg-muted text-muted-foreground rounded px-1.5">
+                {filteredInquiries.length}
+              </span>
+            </TabsTrigger>
+            <TabsTrigger value="contacts">
+              Contact Submissions
+              <span className="ml-1.5 text-xs bg-muted text-muted-foreground rounded px-1.5">
+                {filteredContacts.length}
+              </span>
+            </TabsTrigger>
           </TabsList>
 
+          {/* Quotation Inquiries Tab */}
           <TabsContent value="quotations">
             <div className="bg-background border border-border rounded-lg overflow-hidden">
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>Inquiry #</TableHead>
-                    <TableHead>Customer</TableHead>
-                    <TableHead>Company</TableHead>
-                    <TableHead>Email</TableHead>
-                    <TableHead>Status</TableHead>
-                    <TableHead>Date</TableHead>
-                    <TableHead>Actions</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {filteredInquiries.map((inquiry) => (
-                    <TableRow key={inquiry.id}>
-                      <TableCell className="font-mono text-sm">{inquiry.inquiry_number}</TableCell>
-                      <TableCell>{inquiry.customer_name}</TableCell>
-                      <TableCell>{inquiry.customer_company}</TableCell>
-                      <TableCell>{inquiry.customer_email}</TableCell>
-                      <TableCell>{getStatusBadge(inquiry.status)}</TableCell>
-                      <TableCell>{new Date(inquiry.created_at || '').toLocaleDateString()}</TableCell>
-                      <TableCell>
-                        <div className="flex gap-2">
-                          <Button variant="outline" size="sm" onClick={() => handleViewInquiry(inquiry)}><Eye className="w-4 h-4" /></Button>
-                          <Select value={inquiry.status} onValueChange={(value) => handleStatusChange(inquiry.id, value)}>
-                            <SelectTrigger className="w-32"><SelectValue /></SelectTrigger>
-                            <SelectContent>
-                              <SelectItem value="new">New</SelectItem>
-                              <SelectItem value="in_review">In Review</SelectItem>
-                              <SelectItem value="quoted">Quoted</SelectItem>
-                              <SelectItem value="closed">Closed</SelectItem>
-                            </SelectContent>
-                          </Select>
-                        </div>
-                      </TableCell>
-                    </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
-              {filteredInquiries.length === 0 && <div className="text-center py-12 text-muted-foreground">No inquiries found</div>}
+              {isLoading ? (
+                <LoadingState />
+              ) : filteredInquiries.length === 0 ? (
+                <EmptyState
+                  icon={MessageCircle}
+                  title="No quotation inquiries found"
+                  description="Inquiries submitted through the website will appear here."
+                />
+              ) : (
+                <>
+                  <Table>
+                    <TableHeader>
+                      <TableRow className="bg-muted/40">
+                        <TableHead className="text-sm font-semibold">Inquiry #</TableHead>
+                        <TableHead className="text-sm font-semibold">Customer</TableHead>
+                        <TableHead className="hidden md:table-cell text-sm font-semibold">Company</TableHead>
+                        <TableHead className="hidden lg:table-cell text-sm font-semibold">Email</TableHead>
+                        <TableHead className="hidden sm:table-cell text-sm font-semibold">Phone</TableHead>
+                        <TableHead className="text-sm font-semibold">Status</TableHead>
+                        <TableHead className="hidden md:table-cell text-sm font-semibold">Date</TableHead>
+                        <TableHead className="text-right text-sm font-semibold">Actions</TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {paginate(filteredInquiries, inqPage).map((inquiry) => (
+                        <TableRow key={inquiry.id} className="hover:bg-muted/30 h-16">
+                          <TableCell className="font-mono text-sm text-muted-foreground py-3">
+                            {inquiry.inquiry_number}
+                          </TableCell>
+                          <TableCell className="font-semibold text-base py-3">{inquiry.customer_name}</TableCell>
+                          <TableCell className="hidden md:table-cell text-base text-muted-foreground py-3">
+                            {inquiry.customer_company}
+                          </TableCell>
+                          <TableCell className="hidden lg:table-cell text-base text-muted-foreground py-3">
+                            {inquiry.customer_email}
+                          </TableCell>
+                          <TableCell className="hidden sm:table-cell text-base text-muted-foreground py-3">
+                            {inquiry.customer_phone || '—'}
+                          </TableCell>
+                          <TableCell className="py-3">
+                            <StatusBadge status={inquiry.status} />
+                          </TableCell>
+                          <TableCell className="hidden md:table-cell text-base text-muted-foreground py-3">
+                            {formatDate(inquiry.created_at)}
+                          </TableCell>
+                          <TableCell className="py-3">
+                            <div className="flex items-center justify-end gap-1">
+                              <Button variant="ghost" size="icon" className="h-9 w-9"
+                                onClick={() => handleViewInquiry(inquiry)} title="View details">
+                                <Eye className="w-4 h-4" />
+                              </Button>
+                              {inquiry.status === 'new' || inquiry.status === 'in_review' ? (
+                                <Button variant="ghost" size="icon" className="h-9 w-9 text-emerald-600 hover:text-emerald-700"
+                                  onClick={() => handleStatusChange(inquiry.id, 'quoted')} title="Mark as quoted">
+                                  <CheckCircle className="w-4 h-4" />
+                                </Button>
+                              ) : null}
+                              {inquiry.status !== 'closed' ? (
+                                <Button variant="ghost" size="icon" className="h-9 w-9 text-muted-foreground hover:text-foreground"
+                                  onClick={() => handleStatusChange(inquiry.id, 'closed')} title="Close inquiry">
+                                  <XCircle className="w-4 h-4" />
+                                </Button>
+                              ) : null}
+                            </div>
+                          </TableCell>
+                        </TableRow>
+                      ))}
+                    </TableBody>
+                  </Table>
+                  <PaginationBar current={inqPage} total={totalInqPages} onChange={setInqPage} />
+                </>
+              )}
             </div>
           </TabsContent>
 
+          {/* Contact Submissions Tab */}
           <TabsContent value="contacts">
             <div className="bg-background border border-border rounded-lg overflow-hidden">
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>Name</TableHead><TableHead>Company</TableHead><TableHead>Email</TableHead><TableHead>Subject</TableHead><TableHead>Status</TableHead><TableHead>Date</TableHead><TableHead>Actions</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {filteredContacts.map((contact) => (
-                    <TableRow key={contact.id}>
-                      <TableCell>{contact.name}</TableCell>
-                      <TableCell>{contact.company}</TableCell>
-                      <TableCell>{contact.email}</TableCell>
-                      <TableCell>{contact.subject}</TableCell>
-                      <TableCell>{getStatusBadge(contact.status)}</TableCell>
-                      <TableCell>{new Date(contact.created_at || '').toLocaleDateString()}</TableCell>
-                      <TableCell>
-                        <Select value={contact.status} onValueChange={(value) => handleContactStatusChange(contact.id, value)}>
-                          <SelectTrigger className="w-32"><SelectValue /></SelectTrigger>
-                          <SelectContent>
-                            <SelectItem value="new">New</SelectItem>
-                            <SelectItem value="in_review">In Review</SelectItem>
-                            <SelectItem value="responded">Responded</SelectItem>
-                            <SelectItem value="closed">Closed</SelectItem>
-                          </SelectContent>
-                        </Select>
-                      </TableCell>
-                    </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
-              {filteredContacts.length === 0 && <div className="text-center py-12 text-muted-foreground">No contact submissions found</div>}
+              {isLoading ? (
+                <LoadingState />
+              ) : filteredContacts.length === 0 ? (
+                <EmptyState
+                  icon={Mail}
+                  title="No contact submissions found"
+                  description="Contact form submissions will appear here."
+                />
+              ) : (
+                <>
+                  <Table>
+                    <TableHeader>
+                      <TableRow className="bg-muted/40">
+                        <TableHead className="text-sm font-semibold">Name</TableHead>
+                        <TableHead className="hidden md:table-cell text-sm font-semibold">Company</TableHead>
+                        <TableHead className="hidden lg:table-cell text-sm font-semibold">Email</TableHead>
+                        <TableHead className="hidden sm:table-cell text-sm font-semibold">Subject</TableHead>
+                        <TableHead className="text-sm font-semibold">Status</TableHead>
+                        <TableHead className="hidden md:table-cell text-sm font-semibold">Date</TableHead>
+                        <TableHead className="text-right text-sm font-semibold">Actions</TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {paginate(filteredContacts, conPage).map((contact) => (
+                        <TableRow key={contact.id} className="hover:bg-muted/30 h-16">
+                          <TableCell className="font-semibold text-base py-3">{contact.name}</TableCell>
+                          <TableCell className="hidden md:table-cell text-base text-muted-foreground py-3">{contact.company}</TableCell>
+                          <TableCell className="hidden lg:table-cell text-base text-muted-foreground py-3">{contact.email}</TableCell>
+                          <TableCell className="hidden sm:table-cell text-base text-muted-foreground max-w-xs py-3">
+                            <span className="truncate block">{contact.subject}</span>
+                          </TableCell>
+                          <TableCell className="py-3"><StatusBadge status={contact.status} /></TableCell>
+                          <TableCell className="hidden md:table-cell text-base text-muted-foreground py-3">{formatDate(contact.created_at)}</TableCell>
+                          <TableCell>
+                            <div className="flex items-center justify-end gap-1">
+                              {contact.status === 'new' || contact.status === 'in_review' ? (
+                                <Button variant="ghost" size="icon" className="h-8 w-8 text-emerald-600 hover:text-emerald-700"
+                                  onClick={() => handleContactStatusChange(contact.id, 'responded')} title="Mark as responded">
+                                  <CheckCircle className="w-3.5 h-3.5" />
+                                </Button>
+                              ) : null}
+                              {contact.status !== 'closed' ? (
+                                <Button variant="ghost" size="icon" className="h-8 w-8 text-muted-foreground hover:text-foreground"
+                                  onClick={() => handleContactStatusChange(contact.id, 'closed')} title="Close">
+                                  <XCircle className="w-3.5 h-3.5" />
+                                </Button>
+                              ) : null}
+                              <Select value={contact.status} onValueChange={(v) => handleContactStatusChange(contact.id, v)}>
+                                <SelectTrigger className="h-7 w-28 text-xs"><SelectValue /></SelectTrigger>
+                                <SelectContent>
+                                  <SelectItem value="new">New</SelectItem>
+                                  <SelectItem value="in_review">In Review</SelectItem>
+                                  <SelectItem value="responded">Responded</SelectItem>
+                                  <SelectItem value="closed">Closed</SelectItem>
+                                </SelectContent>
+                              </Select>
+                            </div>
+                          </TableCell>
+                        </TableRow>
+                      ))}
+                    </TableBody>
+                  </Table>
+                  <PaginationBar current={conPage} total={totalConPages} onChange={setConPage} />
+                </>
+              )}
             </div>
           </TabsContent>
         </Tabs>
 
-        {/* ─── Inquiry Detail Dialog ───────────────────────────── */}
+        {/* Inquiry Detail Dialog */}
         <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
           <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto" aria-describedby="inquiry-dialog-desc">
             <DialogDescription id="inquiry-dialog-desc" className="sr-only">Inquiry details</DialogDescription>
             {selectedInquiry && (
               <>
-                <DialogHeader><DialogTitle>Inquiry #{selectedInquiry.inquiry_number}</DialogTitle></DialogHeader>
-                <div className="space-y-4">
-                  <div className="grid grid-cols-2 gap-4">
-                    <div><Label>Customer Name</Label><p className="text-sm">{selectedInquiry.customer_name}</p></div>
-                    <div><Label>Company</Label><p className="text-sm">{selectedInquiry.customer_company}</p></div>
-                    <div><Label>Email</Label><p className="text-sm">{selectedInquiry.customer_email}</p></div>
-                    <div><Label>Phone</Label><p className="text-sm">{selectedInquiry.customer_phone || '-'}</p></div>
-                    {selectedInquiry.whatsapp_number && <div><Label>WhatsApp</Label><p className="text-sm">{selectedInquiry.whatsapp_number}</p></div>}
-                    <div><Label>Status</Label><div className="mt-1">{getStatusBadge(selectedInquiry.status)}</div></div>
-                    <div><Label>Date</Label><p className="text-sm">{new Date(selectedInquiry.created_at || '').toLocaleString()}</p></div>
+                <DialogHeader>
+                  <DialogTitle className="flex items-center gap-3">
+                    Inquiry #{selectedInquiry.inquiry_number}
+                    <StatusBadge status={selectedInquiry.status} />
+                  </DialogTitle>
+                </DialogHeader>
+                <div className="space-y-5">
+                  <div className="grid grid-cols-2 gap-4 p-4 bg-muted/30 rounded-lg">
+                    <div><Label className="text-xs text-muted-foreground">Customer Name</Label><p className="text-sm font-medium mt-0.5">{selectedInquiry.customer_name}</p></div>
+                    <div><Label className="text-xs text-muted-foreground">Company</Label><p className="text-sm mt-0.5">{selectedInquiry.customer_company}</p></div>
+                    <div><Label className="text-xs text-muted-foreground">Email</Label><p className="text-sm mt-0.5">{selectedInquiry.customer_email}</p></div>
+                    <div><Label className="text-xs text-muted-foreground">Phone</Label><p className="text-sm mt-0.5">{selectedInquiry.customer_phone || '—'}</p></div>
+                    {selectedInquiry.whatsapp_number && (
+                      <div><Label className="text-xs text-muted-foreground">WhatsApp</Label><p className="text-sm mt-0.5">{selectedInquiry.whatsapp_number}</p></div>
+                    )}
+                    <div><Label className="text-xs text-muted-foreground">Date</Label><p className="text-sm mt-0.5">{formatDate(selectedInquiry.created_at)}</p></div>
                   </div>
 
-                  {selectedInquiry.size_requirements && <div><Label>Size / dimensions & requirements</Label><p className="text-sm mt-1 p-2 bg-muted rounded whitespace-pre-wrap">{selectedInquiry.size_requirements}</p></div>}
-                  {selectedInquiry.delivery_required !== undefined && <div><Label>Delivery needed</Label><p className="text-sm">{selectedInquiry.delivery_required ? 'Yes' : 'No (pickup/self-collect)'}</p></div>}
-                  {selectedInquiry.company_address && <div><Label>Company / delivery address</Label><p className="text-sm mt-1 p-2 bg-muted rounded whitespace-pre-wrap">{selectedInquiry.company_address}</p></div>}
-                  {selectedInquiry.company_details && <div><Label>Company details (GSTIN, etc.)</Label><p className="text-sm mt-1 p-2 bg-muted rounded whitespace-pre-wrap">{selectedInquiry.company_details}</p></div>}
-                  {selectedInquiry.product_looking_for && <div><Label>Product requested / Looking for</Label><p className="text-sm mt-1 p-2 bg-primary/10 rounded font-medium">{selectedInquiry.product_looking_for}</p></div>}
-                  {selectedInquiry.message && <div><Label>Message</Label><p className="text-sm mt-1 p-2 bg-muted rounded">{selectedInquiry.message}</p></div>}
+                  {selectedInquiry.product_looking_for && (
+                    <div>
+                      <Label className="text-xs text-muted-foreground">Product / Looking for</Label>
+                      <p className="text-sm mt-1 p-3 bg-primary/5 border border-primary/20 rounded font-medium">{selectedInquiry.product_looking_for}</p>
+                    </div>
+                  )}
+                  {selectedInquiry.size_requirements && (
+                    <div>
+                      <Label className="text-xs text-muted-foreground">Size / Dimensions & Requirements</Label>
+                      <p className="text-sm mt-1 p-3 bg-muted rounded whitespace-pre-wrap">{selectedInquiry.size_requirements}</p>
+                    </div>
+                  )}
+                  {selectedInquiry.delivery_required !== undefined && (
+                    <div><Label className="text-xs text-muted-foreground">Delivery needed</Label><p className="text-sm mt-0.5">{selectedInquiry.delivery_required ? 'Yes' : 'No (pickup/self-collect)'}</p></div>
+                  )}
+                  {selectedInquiry.company_address && (
+                    <div>
+                      <Label className="text-xs text-muted-foreground">Company / Delivery Address</Label>
+                      <p className="text-sm mt-1 p-3 bg-muted rounded whitespace-pre-wrap">{selectedInquiry.company_address}</p>
+                    </div>
+                  )}
+                  {selectedInquiry.company_details && (
+                    <div>
+                      <Label className="text-xs text-muted-foreground">Company Details (GSTIN, etc.)</Label>
+                      <p className="text-sm mt-1 p-3 bg-muted rounded whitespace-pre-wrap">{selectedInquiry.company_details}</p>
+                    </div>
+                  )}
+                  {selectedInquiry.message && (
+                    <div>
+                      <Label className="text-xs text-muted-foreground">Message</Label>
+                      <p className="text-sm mt-1 p-3 bg-muted rounded">{selectedInquiry.message}</p>
+                    </div>
+                  )}
 
-                  {/* Inquiry items */}
                   {inquiryItems.length > 0 && (
                     <div>
-                      <Label>Requested Products</Label>
+                      <Label className="text-xs text-muted-foreground">Requested Products</Label>
                       <div className="mt-2 space-y-2">
                         {inquiryItems.map((item) => (
-                          <div key={item.id} className="p-2 border rounded">
-                            <div className="flex justify-between"><span className="font-medium">{item.product_name}</span><span className="text-sm text-muted-foreground">Qty: {item.quantity}</span></div>
-                            <p className="text-xs text-muted-foreground">{item.product_category}</p>
-                            {item.notes && <p className="text-xs mt-1">Notes: {item.notes}</p>}
+                          <div key={item.id} className="flex items-center justify-between p-2.5 border rounded text-sm">
+                            <div>
+                              <span className="font-medium">{item.product_name}</span>
+                              <span className="text-xs text-muted-foreground ml-2">{item.product_category}</span>
+                              {item.notes && <p className="text-xs text-muted-foreground mt-0.5">{item.notes}</p>}
+                            </div>
+                            <span className="text-sm text-muted-foreground">Qty: {item.quantity}</span>
                           </div>
                         ))}
                       </div>
                     </div>
                   )}
 
-                  {/* Attachments */}
                   {inquiryAttachments.length > 0 && (
                     <div>
-                      <Label>Attachments</Label>
+                      <Label className="text-xs text-muted-foreground">Attachments</Label>
                       <div className="mt-2 space-y-2">
                         {inquiryAttachments.map((att) => (
                           <div key={att.id} className="flex items-center justify-between p-2 border rounded">
                             <span className="text-sm">{att.file_name}</span>
-                            <Button variant="outline" size="sm" onClick={() => window.open(att.file_path, '_blank')}><Download className="w-4 h-4 mr-1" />Download</Button>
+                            <Button variant="outline" size="sm" onClick={() => window.open(att.file_path, '_blank')}>
+                              <Download className="w-3.5 h-3.5 mr-1" /> Download
+                            </Button>
                           </div>
                         ))}
                       </div>
                     </div>
                   )}
 
-                  {/* Quotation documents */}
                   {inquiryDocuments.length > 0 && (
                     <div>
-                      <Label>Quotation Documents</Label>
+                      <Label className="text-xs text-muted-foreground">Quotation Documents</Label>
                       <div className="mt-2 space-y-2">
                         {inquiryDocuments.map((doc) => (
-                          <div key={doc.id} className="flex flex-wrap items-center gap-2 p-3 border rounded bg-muted/30">
+                          <div key={doc.id} className="flex flex-wrap items-center gap-2 p-3 border rounded bg-muted/20">
                             <span className="font-mono text-sm font-medium">{doc.proforma_number}</span>
-                            {getDocStatusBadge(doc.status)}
-                            <span className="text-xs text-muted-foreground">Total: {Number(doc.total_amount).toFixed(2)}</span>
-                            {doc.sent_at && <span className="text-xs text-muted-foreground">Sent: {new Date(doc.sent_at).toLocaleDateString()}</span>}
-                            {doc.viewed_at && <span className="text-xs text-muted-foreground">Viewed: {new Date(doc.viewed_at).toLocaleDateString()}</span>}
+                            <StatusBadge status={doc.status} />
+                            <span className="text-xs text-muted-foreground">₹{Number(doc.total_amount).toFixed(2)}</span>
+                            {doc.sent_at && <span className="text-xs text-muted-foreground">Sent: {formatDate(doc.sent_at)}</span>}
+                            {doc.viewed_at && <span className="text-xs text-muted-foreground">Viewed: {formatDate(doc.viewed_at)}</span>}
                             <div className="flex gap-1 ml-auto">
                               {doc.pdf_url && <Button variant="outline" size="sm" onClick={() => window.open(doc.pdf_url!, '_blank')}><Download className="w-3 h-3 mr-1" />PDF</Button>}
                               <Button variant="outline" size="sm" onClick={() => window.open(getQuotationUrl(doc.token), '_blank')}><ExternalLink className="w-3 h-3 mr-1" />View</Button>
@@ -521,28 +648,36 @@ export default function AdminInquiries() {
                     </div>
                   )}
 
-                  {/* Create quotation button */}
-                  <Button type="button" variant="default" onClick={openQuotationDialog}>
-                    <FileText className="w-4 h-4 mr-2" />Create Proforma Invoice
-                  </Button>
-
-                  {/* Admin notes */}
-                  <div>
-                    <Label>Admin Notes</Label>
-                    <Textarea value={adminNotes} onChange={(e) => setAdminNotes(e.target.value)} rows={3} className="mt-1" />
-                    <Button className="mt-2" onClick={() => handleSaveNotes(selectedInquiry.id)}>Save Notes</Button>
+                  <div className="flex items-center gap-3 pt-2 border-t">
+                    <Button onClick={openQuotationDialog}>
+                      <FileText className="w-4 h-4 mr-2" /> Create Proforma Invoice
+                    </Button>
+                    <Select value={selectedInquiry.status} onValueChange={(v) => { handleStatusChange(selectedInquiry.id, v); setSelectedInquiry({ ...selectedInquiry, status: v as any }); }}>
+                      <SelectTrigger className="w-36"><SelectValue /></SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="new">New</SelectItem>
+                        <SelectItem value="in_review">In Review</SelectItem>
+                        <SelectItem value="quoted">Quoted</SelectItem>
+                        <SelectItem value="closed">Closed</SelectItem>
+                      </SelectContent>
+                    </Select>
                   </div>
 
-                  {/* History */}
+                  <div>
+                    <Label className="text-xs text-muted-foreground">Admin Notes</Label>
+                    <Textarea value={adminNotes} onChange={(e) => setAdminNotes(e.target.value)} rows={3} className="mt-1" />
+                    <Button size="sm" className="mt-2" onClick={() => handleSaveNotes(selectedInquiry.id)}>Save Notes</Button>
+                  </div>
+
                   {inquiryHistory.length > 0 && (
                     <div>
-                      <Label>History</Label>
-                      <div className="mt-2 space-y-2">
+                      <Label className="text-xs text-muted-foreground">History</Label>
+                      <div className="mt-2 space-y-1.5">
                         {inquiryHistory.map((h) => (
-                          <div key={h.id} className="text-xs p-2 bg-muted rounded">
+                          <div key={h.id} className="text-xs p-2 bg-muted rounded flex items-center gap-2">
                             <span className="font-medium">{h.status_from || 'Created'} → {h.status_to}</span>
-                            <span className="text-muted-foreground ml-2">{new Date(h.created_at || '').toLocaleString()}</span>
-                            {h.notes && <p className="mt-1">{h.notes}</p>}
+                            <span className="text-muted-foreground">{formatDate(h.created_at)}</span>
+                            {h.notes && <span className="text-muted-foreground">· {h.notes}</span>}
                           </div>
                         ))}
                       </div>
@@ -554,14 +689,12 @@ export default function AdminInquiries() {
           </DialogContent>
         </Dialog>
 
-        {/* ─── Create Quotation Dialog (Proforma Invoice) ──────── */}
+        {/* Create Quotation Dialog */}
         <Dialog open={isQuotationDialogOpen} onOpenChange={setIsQuotationDialogOpen}>
           <DialogContent className="max-w-5xl max-h-[90vh] overflow-y-auto" aria-describedby="quotation-dialog-desc">
-            <DialogDescription id="quotation-dialog-desc" className="sr-only">Create proforma invoice quotation</DialogDescription>
+            <DialogDescription id="quotation-dialog-desc" className="sr-only">Create proforma invoice</DialogDescription>
             <DialogHeader><DialogTitle>Create Proforma Invoice</DialogTitle></DialogHeader>
             <div className="space-y-5">
-
-              {/* Invoice metadata */}
               <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
                 <div><Label>Proforma No</Label><Input value={qfProformaNo} onChange={(e) => setQfProformaNo(e.target.value)} className="mt-1" /></div>
                 <div><Label>Date</Label><Input value={qfDate} onChange={(e) => setQfDate(e.target.value)} className="mt-1" /></div>
@@ -571,11 +704,12 @@ export default function AdminInquiries() {
                 <div><Label>Delivery</Label><Input value={qfDelivery} onChange={(e) => setQfDelivery(e.target.value)} className="mt-1" /></div>
               </div>
 
-              {/* Line items */}
               <div>
                 <div className="flex items-center justify-between mb-2">
                   <Label>Line Items</Label>
-                  <Button type="button" variant="outline" size="sm" onClick={addLineItem}><Plus className="w-3 h-3 mr-1" />Add row</Button>
+                  <Button type="button" variant="outline" size="sm" onClick={addLineItem}>
+                    <Plus className="w-3 h-3 mr-1" />Add row
+                  </Button>
                 </div>
                 <div className="border rounded-lg overflow-x-auto">
                   <Table>
@@ -596,23 +730,25 @@ export default function AdminInquiries() {
                     <TableBody>
                       {qfLineItems.map((item, i) => (
                         <TableRow key={i}>
-                          <TableCell className="text-center text-xs">{i + 1}</TableCell>
+                          <TableCell className="text-center text-xs text-muted-foreground">{i + 1}</TableCell>
                           <TableCell><Input value={item.description} onChange={(e) => updateLineItem(i, 'description', e.target.value)} className="min-w-[140px]" /></TableCell>
                           <TableCell><Input value={item.hsn_code} onChange={(e) => updateLineItem(i, 'hsn_code', e.target.value)} className="w-24" /></TableCell>
                           <TableCell><Input type="number" min={0} value={item.qty || ''} onChange={(e) => updateLineItem(i, 'qty', Number(e.target.value) || 0)} className="w-16" /></TableCell>
                           <TableCell>
                             <Select value={item.unit} onValueChange={(v) => updateLineItem(i, 'unit', v)}>
                               <SelectTrigger className="w-20"><SelectValue /></SelectTrigger>
-                              <SelectContent>{quotationTemplate.units.map(u => <SelectItem key={u} value={u}>{u}</SelectItem>)}</SelectContent>
+                              <SelectContent>{quotationTemplate.units.map((u) => <SelectItem key={u} value={u}>{u}</SelectItem>)}</SelectContent>
                             </Select>
                           </TableCell>
                           <TableCell><Input type="number" min={0} step={0.01} value={item.rate || ''} onChange={(e) => updateLineItem(i, 'rate', Number(e.target.value) || 0)} className="w-24" /></TableCell>
                           <TableCell><Input type="number" min={0} max={100} step={0.1} value={item.discount_percent || ''} onChange={(e) => updateLineItem(i, 'discount_percent', Number(e.target.value) || 0)} className="w-16" /></TableCell>
                           <TableCell><Input type="number" min={0} max={100} step={0.1} value={item.gst_percent} onChange={(e) => updateLineItem(i, 'gst_percent', Number(e.target.value) || 0)} className="w-16" /></TableCell>
-                          <TableCell className="font-medium text-right whitespace-nowrap">{item.amount.toFixed(2)}</TableCell>
+                          <TableCell className="font-medium text-right whitespace-nowrap">₹{item.amount.toFixed(2)}</TableCell>
                           <TableCell>
                             {qfLineItems.length > 1 && (
-                              <Button type="button" variant="ghost" size="icon" className="h-7 w-7 text-destructive" onClick={() => removeLineItem(i)}><Trash2 className="w-3 h-3" /></Button>
+                              <Button type="button" variant="ghost" size="icon" className="h-7 w-7 text-destructive" onClick={() => removeLineItem(i)}>
+                                <Trash2 className="w-3 h-3" />
+                              </Button>
                             )}
                           </TableCell>
                         </TableRow>
@@ -622,33 +758,32 @@ export default function AdminInquiries() {
                 </div>
               </div>
 
-              {/* Totals */}
               <div className="flex justify-end">
                 <div className="w-64 space-y-1 text-sm">
-                  <div className="flex justify-between"><span>Taxable Amount</span><span>{qfSubtotal.toFixed(2)}</span></div>
-                  <div className="flex justify-between"><span>GST / IGST</span><span>{qfTaxAmount.toFixed(2)}</span></div>
-                  <div className="flex justify-between font-bold text-base border-t pt-1"><span>Grand Total</span><span>{qfGrandTotal.toFixed(2)}</span></div>
+                  <div className="flex justify-between"><span className="text-muted-foreground">Taxable Amount</span><span>₹{qfSubtotal.toFixed(2)}</span></div>
+                  <div className="flex justify-between"><span className="text-muted-foreground">GST / IGST</span><span>₹{qfTaxAmount.toFixed(2)}</span></div>
+                  <div className="flex justify-between font-bold text-base border-t pt-2"><span>Grand Total</span><span>₹{qfGrandTotal.toFixed(2)}</span></div>
                 </div>
               </div>
 
-              {/* Remark */}
               <div>
                 <Label>Remark</Label>
                 <Textarea value={qfRemark} onChange={(e) => setQfRemark(e.target.value)} rows={2} className="mt-1" />
               </div>
 
-              {/* Actions */}
               <div className="flex flex-wrap gap-2 justify-end pt-2 border-t">
                 <Button variant="outline" onClick={() => setIsQuotationDialogOpen(false)}>Cancel</Button>
                 {!generatedDocId ? (
                   <Button onClick={handleGeneratePdf} disabled={isGenerating}>
-                    {isGenerating ? 'Generating...' : <><FileText className="w-4 h-4 mr-2" />Generate PDF & Save</>}
+                    {isGenerating ? 'Generating…' : <><FileText className="w-4 h-4 mr-2" />Generate PDF & Save</>}
                   </Button>
                 ) : (
                   <>
                     <Button variant="outline" onClick={handleSendEmail}><Mail className="w-4 h-4 mr-2" />Send via Email</Button>
                     <Button variant="outline" onClick={handleSendWhatsApp}><MessageCircle className="w-4 h-4 mr-2" />Send via WhatsApp</Button>
-                    <Button variant="outline" onClick={() => { if (generatedToken) window.open(getQuotationUrl(generatedToken), '_blank'); }}><ExternalLink className="w-4 h-4 mr-2" />View public page</Button>
+                    <Button variant="outline" onClick={() => { if (generatedToken) window.open(getQuotationUrl(generatedToken), '_blank'); }}>
+                      <ExternalLink className="w-4 h-4 mr-2" />View public page
+                    </Button>
                   </>
                 )}
               </div>

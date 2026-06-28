@@ -17,11 +17,10 @@ import CustomQuote from "./pages/CustomQuote";
 import Contact from "./pages/Contact";
 import About from "./pages/About";
 import AdminLogin from "./pages/admin/AdminLogin";
+import AdminDashboard from "./pages/admin/AdminDashboard";
 import AdminProducts from "./pages/admin/AdminProducts";
-import AdminMaterials from "./pages/admin/AdminMaterials";
 import AdminCategories from "./pages/admin/AdminCategories";
 import AdminInquiries from "./pages/admin/AdminInquiries";
-import AdminRotatingMessages from "./pages/admin/AdminRotatingMessages";
 import AdminPriceList from "./pages/admin/AdminPriceList";
 import PriceList from "./pages/PriceList";
 import QuotationView from "./pages/QuotationView";
@@ -51,11 +50,10 @@ const App = () => (
             <Route path="/contact" element={<Contact />} />
             <Route path="/about" element={<About />} />
             <Route path="/admin/login" element={<AdminLogin />} />
-            <Route path="/admin" element={<AdminProducts />} />
-            <Route path="/admin/materials" element={<AdminMaterials />} />
+            <Route path="/admin" element={<AdminDashboard />} />
+            <Route path="/admin/products" element={<AdminProducts />} />
             <Route path="/admin/categories" element={<AdminCategories />} />
             <Route path="/admin/inquiries" element={<AdminInquiries />} />
-            <Route path="/admin/rotating-messages" element={<AdminRotatingMessages />} />
             <Route path="/admin/price-list" element={<AdminPriceList />} />
             <Route path="/quotation/:token" element={<QuotationView />} />
             <Route path="*" element={<NotFound />} />
